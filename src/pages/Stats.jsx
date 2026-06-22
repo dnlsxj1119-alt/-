@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useApp } from '../context/AppContext'
 import HeatMap from '../components/HeatMap'
 import HabitCalendarModal from '../components/HabitCalendarModal'
+import { getToday, formatFull } from '../utils/dateUtils'
 
+// ── Gratitude helpers ─────────────────────────────────────────────────────────
+const GRATITUDE_KEY = 'hg_gratitude'
+const loadGratitude = () => { try { return JSON.parse(localStorage.getItem(GRATITUDE_KEY) || '{}') } catch { return {} } }
+const saveGratitude = (data) => localStorage.setItem(GRATITUDE_KEY, JSON.stringify(data))
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, color = 'violet' }) {
   const colors = {
     violet: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400',
@@ -30,10 +37,7 @@ function HabitBar({ habit, rate, onClick }) {
           <span className="text-xs font-bold text-violet-600 dark:text-violet-400 ml-2 flex-shrink-0">{pct}%</span>
         </div>
         <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-violet-500 to-pink-500 rounded-full transition-all duration-700"
-            style={{ width: `${pct}%` }}
-          />
+          <div className="h-full bg-gradient-to-r from-violet-500 to-pink-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
         </div>
       </div>
       <span className="text-[10px] text-gray-300 dark:text-gray-600 group-hover:text-violet-400 dark:group-hover:text-violet-500 transition-colors flex-shrink-0">📅</span>
@@ -41,6 +45,116 @@ function HabitBar({ habit, rate, onClick }) {
   )
 }
 
+function GratitudeLog() {
+  const today = getToday()
+  const [all,      setAll]      = useState(() => loadGratitude())
+  const [editDate, setEditDate] = useState(null)
+  const [draft,    setDraft]    = useState('')
+  const [showAll,  setShowAll]  = useState(false)
+  const textRef = useRef(null)
+
+  const entries = Object.entries(all).sort(([a], [b]) => b.localeCompare(a)) // newest first
+  const visible = showAll ? entries : entries.slice(0, 5)
+
+  const startEdit = (date, content) => {
+    setEditDate(date)
+    setDraft(content)
+    setTimeout(() => textRef.current?.focus(), 50)
+  }
+
+  const handleSave = () => {
+    const trimmed = draft.trim()
+    const next = { ...all }
+    if (trimmed) next[editDate] = trimmed
+    else delete next[editDate]
+    saveGratitude(next)
+    setAll(next)
+    setEditDate(null)
+    setDraft('')
+  }
+
+  const handleCancel = () => { setEditDate(null); setDraft('') }
+
+  // New entry for today if not yet written
+  const handleAddToday = () => startEdit(today, all[today] || '')
+
+  return (
+    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-5 shadow-sm border border-white/50 dark:border-gray-700/50">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">🙏 감사 일기</p>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">{entries.length}개 기록</span>
+      </div>
+
+      {entries.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-3xl mb-2">🌱</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">아직 감사 일기가 없어요</p>
+          <button onClick={handleAddToday}
+            className="px-4 py-2 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
+            오늘 첫 감사 일기 쓰기
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Add today button if today not yet written */}
+          {!all[today] && (
+            <button onClick={handleAddToday}
+              className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-500 dark:text-amber-400 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
+              + 오늘의 감사 한 줄 추가
+            </button>
+          )}
+
+          {visible.map(([date, content]) => (
+            <div key={date} className={`rounded-2xl p-3.5 ${date === today ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-800/60'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  {date === today && <span className="text-[9px] font-bold bg-amber-400 text-white px-1.5 py-0.5 rounded-full">오늘</span>}
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500">{formatFull(date)}</p>
+                </div>
+                <button onClick={() => editDate === date ? handleCancel() : startEdit(date, content)}
+                  className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 transition-colors font-medium px-1.5">
+                  {editDate === date ? '취소' : '수정'}
+                </button>
+              </div>
+
+              {editDate === date ? (
+                <div>
+                  <textarea
+                    ref={textRef}
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    maxLength={100}
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={handleSave}
+                      className="flex-1 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-white text-xs font-bold active:scale-95 transition-all">저장</button>
+                    {draft.trim() === '' && content && (
+                      <button onClick={handleSave}
+                        className="px-3 py-1.5 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-500 text-xs font-semibold hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">삭제</button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{content}</p>
+              )}
+            </div>
+          ))}
+
+          {entries.length > 5 && (
+            <button onClick={() => setShowAll(v => !v)}
+              className="w-full py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 transition-colors">
+              {showAll ? '▲ 접기' : `▼ 전체 보기 (${entries.length - 5}개 더)`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function Stats() {
   const { gameState, logs, getHabitStats, getTotalCompletions, getCurrentStreak } = useApp()
   const [calendarHabit, setCalendarHabit] = useState(null)
@@ -68,12 +182,11 @@ export default function Stats() {
       </div>
 
       {/* Habit completion chart */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-5 shadow-sm border border-white/50 dark:border-gray-700/50">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-5 mb-4 shadow-sm border border-white/50 dark:border-gray-700/50">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">습관별 달성률</p>
           <span className="text-[10px] text-gray-400 dark:text-gray-500">최근 30일 · 탭하면 달력</span>
         </div>
-
         {habitStats.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-2">📊</p>
@@ -88,13 +201,12 @@ export default function Stats() {
         )}
       </div>
 
+      {/* Gratitude journal log */}
+      <GratitudeLog />
+
       {/* Calendar modal */}
       {calendarHabit && (
-        <HabitCalendarModal
-          habit={calendarHabit}
-          logs={logs}
-          onClose={() => setCalendarHabit(null)}
-        />
+        <HabitCalendarModal habit={calendarHabit} logs={logs} onClose={() => setCalendarHabit(null)} />
       )}
     </div>
   )
