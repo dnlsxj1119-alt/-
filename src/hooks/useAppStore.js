@@ -215,6 +215,16 @@ export function useAppStore() {
     save(STORAGE_KEYS.LOGS, nextLogs); setLogs(nextLogs)
   }, [logs, gameState, habits])
 
+  // ── Past log edit (no EXP change) ────────────────────────────────────────
+  const setPastLog = useCallback((date, habitId, value) => {
+    const dayLogs = { ...(logs[date] || {}) }
+    if (value) dayLogs[habitId] = value
+    else delete dayLogs[habitId]
+    const nextLogs = { ...logs, [date]: dayLogs }
+    save(STORAGE_KEYS.LOGS, nextLogs)
+    setLogs(nextLogs)
+  }, [logs])
+
   // ── Habitat ───────────────────────────────────────────────────────────────
   const toggleHabitatItem = useCallback((itemId) => {
     const next = habitatItems.map(i => i.id === itemId ? { ...i, placed: !i.placed } : i)
@@ -272,6 +282,7 @@ export function useAppStore() {
     habits, addHabit, updateHabit, deleteHabit,
     logs, gameState,
     habitatItems, toggleHabitatItem,
+    setPastLog,
     checkHabit, uncheckHabit,
     getCreatureStage, getTodayLogs,
     getCoreHabits, getLifeHabits,
