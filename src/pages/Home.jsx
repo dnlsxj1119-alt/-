@@ -13,64 +13,104 @@ const saveGratitude  = (data) => localStorage.setItem(GRATITUDE_KEY, JSON.string
 
 function GratitudeSection() {
   const today    = getToday()
-  const [all,    setAll]    = useState(() => loadGratitude())
-  const [editing, setEditing] = useState(false)
-  const [draft,  setDraft]  = useState('')
-  const textRef  = useRef(null)
+  const [all,      setAll]      = useState(() => loadGratitude())
+  const [editDate, setEditDate] = useState(null)
+  const [draft,    setDraft]    = useState('')
+  const [showPast, setShowPast] = useState(false)
+  const textRef = useRef(null)
 
-  const saved = all[today] || ''
+  const entries = Object.entries(all).sort(([a], [b]) => b.localeCompare(a))
+  const pastEntries = entries.filter(([d]) => d !== today)
 
-  const startEdit = () => {
-    setDraft(saved)
-    setEditing(true)
+  const startEdit = (date, content = '') => {
+    setEditDate(date)
+    setDraft(content)
     setTimeout(() => textRef.current?.focus(), 50)
   }
 
   const handleSave = () => {
-    if (!draft.trim()) return
-    const next = { ...all, [today]: draft.trim() }
+    const trimmed = draft.trim()
+    const next = { ...all }
+    if (trimmed) next[editDate] = trimmed
+    else delete next[editDate]
     saveGratitude(next)
     setAll(next)
-    setEditing(false)
+    setEditDate(null)
+    setDraft('')
   }
 
-  const handleCancel = () => { setEditing(false); setDraft('') }
+  const handleCancel = () => { setEditDate(null); setDraft('') }
+
+  const renderEntry = (date, content) => {
+    const isEditing = editDate === date
+    const isToday   = date === today
+    return (
+      <div key={date} className={`rounded-2xl p-3 ${isToday ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            {isToday && <span className="text-[9px] font-bold bg-amber-400 text-white px-1.5 py-0.5 rounded-full">오늘</span>}
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{formatFull(date)}</p>
+          </div>
+          <button
+            onClick={() => isEditing ? handleCancel() : startEdit(date, content)}
+            className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 transition-colors font-medium"
+          >{isEditing ? '취소' : '수정'}</button>
+        </div>
+        {isEditing ? (
+          <div>
+            <textarea
+              ref={textRef}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              placeholder="감사한 일을 적어보세요"
+              maxLength={100}
+              rows={2}
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+            />
+            <div className="flex gap-2 mt-2">
+              {!draft.trim() && content && (
+                <button onClick={handleSave} className="px-3 py-1.5 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-500 text-xs font-semibold">삭제</button>
+              )}
+              <button onClick={handleSave} disabled={!draft.trim() && !content}
+                className="flex-1 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 text-white text-xs font-bold transition-all disabled:opacity-40">저장</button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{content}</p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl px-4 py-3.5 shadow-sm border border-white/50 dark:border-gray-700/50">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-bold text-amber-600 dark:text-amber-400">🙏 오늘의 감사 한 줄</p>
-        {saved && !editing && (
-          <button onClick={startEdit} className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-violet-500 transition-colors">수정</button>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-bold text-amber-600 dark:text-amber-400">🙏 감사 일기</p>
+        {pastEntries.length > 0 && (
+          <button onClick={() => setShowPast(v => !v)}
+            className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 transition-colors font-medium">
+            {showPast ? '접기' : `지난 기록 ${pastEntries.length}개`}
+          </button>
         )}
       </div>
 
-      {editing ? (
-        <div>
-          <textarea
-            ref={textRef}
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder="오늘 감사한 일을 한 줄로 적어보세요"
-            maxLength={100}
-            rows={2}
-            className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
-          />
-          <div className="flex gap-2 mt-2">
-            <button onClick={handleCancel}
-              className="flex-1 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">취소</button>
-            <button onClick={handleSave} disabled={!draft.trim()}
-              className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 text-white text-xs font-bold transition-all disabled:opacity-40">저장</button>
-          </div>
-        </div>
-      ) : saved ? (
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{saved}</p>
-      ) : (
-        <button onClick={startEdit}
-          className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-400 dark:text-amber-500 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
-          + 감사한 일 적기
-        </button>
-      )}
+      <div className="space-y-2">
+        {/* Today */}
+        {all[today]
+          ? renderEntry(today, all[today])
+          : editDate === today
+            ? renderEntry(today, '')
+            : (
+              <button onClick={() => startEdit(today)}
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-400 dark:text-amber-500 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
+                + 오늘의 감사 한 줄 적기
+              </button>
+            )
+        }
+
+        {/* Past entries */}
+        {showPast && pastEntries.map(([date, content]) => renderEntry(date, content))}
+      </div>
     </div>
   )
 }
