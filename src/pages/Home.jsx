@@ -15,10 +15,28 @@ function MultiplierBadge({ multiplier }) {
 }
 
 function HabitSection({ title, titleColor, habits, todayLogs, onCheck, onUncheck, info }) {
-  const checked   = habits.filter(h => todayLogs[h.id])
-  const unchecked = habits.filter(h => !todayLogs[h.id])
-
   if (!habits.length) return null
+
+  const checked = habits.filter(h => todayLogs[h.id])
+
+  // Group by category, preserving CATEGORIES order
+  const grouped = {}
+  habits.forEach(h => {
+    const cat = h.category || '기타'
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat].push(h)
+  })
+  const cats = Object.keys(grouped)
+
+  const renderItem = (h) => {
+    const logEntry = todayLogs[h.id]
+    const sel = Array.isArray(logEntry) ? logEntry : []
+    const done = !!todayLogs[h.id]
+    return (
+      <HabitItem key={h.id} habit={h} isChecked={done} selectedOptions={sel}
+        onToggle={() => done ? onUncheck(h) : onCheck(h)} />
+    )
+  }
 
   return (
     <div>
@@ -27,17 +45,16 @@ function HabitSection({ title, titleColor, habits, todayLogs, onCheck, onUncheck
         <span className="text-[10px] text-gray-400 dark:text-gray-500">{checked.length}/{habits.length}</span>
       </div>
       {info && <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/60 px-1 mb-2">{info}</p>}
-      <div className="space-y-2">
-        {unchecked.map(h => {
-          const logEntry = todayLogs[h.id]
-          const sel = Array.isArray(logEntry) ? logEntry : []
-          return <HabitItem key={h.id} habit={h} isChecked={false} selectedOptions={sel} onToggle={() => onCheck(h)} />
-        })}
-        {checked.map(h => {
-          const logEntry = todayLogs[h.id]
-          const sel = Array.isArray(logEntry) ? logEntry : []
-          return <HabitItem key={h.id} habit={h} isChecked={true} selectedOptions={sel} onToggle={() => onUncheck(h)} />
-        })}
+      <div className="space-y-4">
+        {cats.map(cat => (
+          <div key={cat}>
+            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1 mb-1.5">{cat}</p>
+            <div className="space-y-2">
+              {grouped[cat].filter(h => !todayLogs[h.id]).map(renderItem)}
+              {grouped[cat].filter(h =>  todayLogs[h.id]).map(renderItem)}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
