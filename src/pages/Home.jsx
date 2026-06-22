@@ -14,19 +14,10 @@ function MultiplierBadge({ multiplier }) {
   )
 }
 
-function HabitSection({ title, titleColor, habits, todayLogs, onCheck, onUncheck, info }) {
+function HabitSection({ title, titleColor, habits, todayLogs, onCheck, onUncheck, info, groupByCategory = false }) {
   if (!habits.length) return null
 
   const checked = habits.filter(h => todayLogs[h.id])
-
-  // Group by category, preserving CATEGORIES order
-  const grouped = {}
-  habits.forEach(h => {
-    const cat = h.category || '기타'
-    if (!grouped[cat]) grouped[cat] = []
-    grouped[cat].push(h)
-  })
-  const cats = Object.keys(grouped)
 
   const renderItem = (h) => {
     const logEntry = todayLogs[h.id]
@@ -38,6 +29,16 @@ function HabitSection({ title, titleColor, habits, todayLogs, onCheck, onUncheck
     )
   }
 
+  // Group by category (core habits only)
+  const grouped = {}
+  if (groupByCategory) {
+    habits.forEach(h => {
+      const cat = h.category || '기타'
+      if (!grouped[cat]) grouped[cat] = []
+      grouped[cat].push(h)
+    })
+  }
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-2 px-1">
@@ -45,17 +46,24 @@ function HabitSection({ title, titleColor, habits, todayLogs, onCheck, onUncheck
         <span className="text-[10px] text-gray-400 dark:text-gray-500">{checked.length}/{habits.length}</span>
       </div>
       {info && <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/60 px-1 mb-2">{info}</p>}
-      <div className="space-y-4">
-        {cats.map(cat => (
-          <div key={cat}>
-            <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1 mb-1.5">{cat}</p>
-            <div className="space-y-2">
-              {grouped[cat].filter(h => !todayLogs[h.id]).map(renderItem)}
-              {grouped[cat].filter(h =>  todayLogs[h.id]).map(renderItem)}
+      {groupByCategory ? (
+        <div className="space-y-4">
+          {Object.keys(grouped).map(cat => (
+            <div key={cat}>
+              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1 mb-1.5">{cat}</p>
+              <div className="space-y-2">
+                {grouped[cat].filter(h => !todayLogs[h.id]).map(renderItem)}
+                {grouped[cat].filter(h =>  todayLogs[h.id]).map(renderItem)}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {habits.filter(h => !todayLogs[h.id]).map(renderItem)}
+          {habits.filter(h =>  todayLogs[h.id]).map(renderItem)}
+        </div>
+      )}
     </div>
   )
 }
@@ -200,6 +208,7 @@ export default function Home() {
             todayLogs={todayLogs}
             onCheck={handleCheck}
             onUncheck={handleUncheck}
+            groupByCategory
           />
 
           {/* Life habits */}
