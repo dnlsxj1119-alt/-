@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import CreatureDisplay from '../components/CreatureDisplay'
 import HabitItem from '../components/HabitItem'
@@ -6,6 +6,74 @@ import HabitForm from '../components/HabitForm'
 import OptionSelectModal from '../components/OptionSelectModal'
 import ProgressBar from '../components/ProgressBar'
 import { getToday, formatFull } from '../utils/dateUtils'
+
+const GRATITUDE_KEY = 'hg_gratitude'
+const loadGratitude  = () => { try { return JSON.parse(localStorage.getItem(GRATITUDE_KEY) || '{}') } catch { return {} } }
+const saveGratitude  = (data) => localStorage.setItem(GRATITUDE_KEY, JSON.stringify(data))
+
+function GratitudeSection() {
+  const today    = getToday()
+  const [all,    setAll]    = useState(() => loadGratitude())
+  const [editing, setEditing] = useState(false)
+  const [draft,  setDraft]  = useState('')
+  const textRef  = useRef(null)
+
+  const saved = all[today] || ''
+
+  const startEdit = () => {
+    setDraft(saved)
+    setEditing(true)
+    setTimeout(() => textRef.current?.focus(), 50)
+  }
+
+  const handleSave = () => {
+    if (!draft.trim()) return
+    const next = { ...all, [today]: draft.trim() }
+    saveGratitude(next)
+    setAll(next)
+    setEditing(false)
+  }
+
+  const handleCancel = () => { setEditing(false); setDraft('') }
+
+  return (
+    <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl px-4 py-3.5 shadow-sm border border-white/50 dark:border-gray-700/50">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-bold text-amber-600 dark:text-amber-400">🙏 오늘의 감사 한 줄</p>
+        {saved && !editing && (
+          <button onClick={startEdit} className="text-[10px] text-gray-400 dark:text-gray-500 hover:text-violet-500 transition-colors">수정</button>
+        )}
+      </div>
+
+      {editing ? (
+        <div>
+          <textarea
+            ref={textRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            placeholder="오늘 감사한 일을 한 줄로 적어보세요"
+            maxLength={100}
+            rows={2}
+            className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+          />
+          <div className="flex gap-2 mt-2">
+            <button onClick={handleCancel}
+              className="flex-1 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">취소</button>
+            <button onClick={handleSave} disabled={!draft.trim()}
+              className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 text-white text-xs font-bold transition-all disabled:opacity-40">저장</button>
+          </div>
+        </div>
+      ) : saved ? (
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{saved}</p>
+      ) : (
+        <button onClick={startEdit}
+          className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-400 dark:text-amber-500 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
+          + 감사한 일 적기
+        </button>
+      )}
+    </div>
+  )
+}
 
 function MultiplierBadge({ multiplier }) {
   if (multiplier <= 1) return null
@@ -230,6 +298,11 @@ export default function Home() {
           className="fixed bottom-24 right-1/2 translate-x-[calc(50%+148px)] flex items-center justify-center bg-violet-500 hover:bg-violet-600 active:scale-90 text-white text-2xl rounded-full shadow-lg shadow-violet-300/50 dark:shadow-violet-900/50 transition-all z-30"
           style={{ width: 52, height: 52 }} aria-label="습관 추가">+</button>
       )}
+
+      {/* Gratitude journal */}
+      <div className="mt-6">
+        <GratitudeSection />
+      </div>
 
       {formOpen && <HabitForm onSave={handleAddHabit} onClose={() => setFormOpen(false)} />}
       {optionTarget && <OptionSelectModal habit={optionTarget} onConfirm={handleOptionConfirm} onClose={() => setOptionTarget(null)} />}

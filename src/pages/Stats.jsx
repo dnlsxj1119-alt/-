@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import HeatMap from '../components/HeatMap'
+import HabitCalendarModal from '../components/HabitCalendarModal'
 
 function StatCard({ label, value, sub, color = 'violet' }) {
   const colors = {
@@ -17,14 +19,14 @@ function StatCard({ label, value, sub, color = 'violet' }) {
   )
 }
 
-function HabitBar({ habit, rate, rank }) {
+function HabitBar({ habit, rate, onClick }) {
   const pct = Math.round(rate * 100)
   return (
-    <div className="flex items-center gap-3">
+    <button onClick={onClick} className="w-full flex items-center gap-3 text-left hover:bg-violet-50 dark:hover:bg-violet-900/10 rounded-2xl p-1.5 -mx-1.5 transition-colors group">
       <span className="text-lg w-7 text-center flex-shrink-0">{habit.icon}</span>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{habit.name}</p>
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate group-hover:text-violet-700 dark:group-hover:text-violet-400 transition-colors">{habit.name}</p>
           <span className="text-xs font-bold text-violet-600 dark:text-violet-400 ml-2 flex-shrink-0">{pct}%</span>
         </div>
         <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -34,16 +36,18 @@ function HabitBar({ habit, rate, rank }) {
           />
         </div>
       </div>
-    </div>
+      <span className="text-[10px] text-gray-300 dark:text-gray-600 group-hover:text-violet-400 dark:group-hover:text-violet-500 transition-colors flex-shrink-0">📅</span>
+    </button>
   )
 }
 
 export default function Stats() {
-  const { gameState, getHabitStats, getTotalCompletions, getCurrentStreak } = useApp()
+  const { gameState, logs, getHabitStats, getTotalCompletions, getCurrentStreak } = useApp()
+  const [calendarHabit, setCalendarHabit] = useState(null)
 
-  const habitStats     = getHabitStats()
-  const totalDone      = getTotalCompletions()
-  const streak         = getCurrentStreak()
+  const habitStats = getHabitStats()
+  const totalDone  = getTotalCompletions()
+  const streak     = getCurrentStreak()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-4 pt-6 pb-28">
@@ -67,7 +71,7 @@ export default function Stats() {
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-5 shadow-sm border border-white/50 dark:border-gray-700/50">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">습관별 달성률</p>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">최근 30일</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">최근 30일 · 탭하면 달력</span>
         </div>
 
         {habitStats.length === 0 ? (
@@ -76,13 +80,22 @@ export default function Stats() {
             <p className="text-sm text-gray-400 dark:text-gray-500">아직 데이터가 없어요</p>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-1">
             {habitStats.map((h, i) => (
-              <HabitBar key={h.id} habit={h} rate={h.rate} rank={i + 1} />
+              <HabitBar key={h.id} habit={h} rate={h.rate} rank={i + 1} onClick={() => setCalendarHabit(h)} />
             ))}
           </div>
         )}
       </div>
+
+      {/* Calendar modal */}
+      {calendarHabit && (
+        <HabitCalendarModal
+          habit={calendarHabit}
+          logs={logs}
+          onClose={() => setCalendarHabit(null)}
+        />
+      )}
     </div>
   )
 }
