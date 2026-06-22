@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { EMOJIS, CATEGORIES, DIFFICULTIES, HABIT_TYPES } from '../utils/constants'
+import { EMOJI_CATEGORIES, CATEGORIES, DIFFICULTIES, HABIT_TYPES } from '../utils/constants'
 
 const DEFAULTS = { name: '', icon: '⭐', category: '건강', difficulty: 'easy', type: 'core', options: [] }
 
@@ -10,6 +10,7 @@ export default function HabitForm({ habit, onSave, onClose }) {
       : DEFAULTS
   )
   const [showEmoji,   setShowEmoji]   = useState(false)
+  const [emojiTab,    setEmojiTab]    = useState(0)
   const [optionInput, setOptionInput] = useState('')
 
   useEffect(() => {
@@ -79,13 +80,28 @@ export default function HabitForm({ habit, onSave, onClose }) {
               {form.icon}
             </button>
             {showEmoji && (
-              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl grid grid-cols-8 gap-1 max-h-36 overflow-y-auto">
-                {EMOJIS.map(emoji => (
-                  <button key={emoji} type="button"
-                    onClick={() => { setForm(f => ({ ...f, icon: emoji })); setShowEmoji(false) }}
-                    className={`text-xl p-1.5 rounded-xl hover:bg-violet-100 dark:hover:bg-gray-700 transition-colors ${form.icon === emoji ? 'bg-violet-200 dark:bg-violet-900' : ''}`}
-                  >{emoji}</button>
-                ))}
+              <div className="mt-2 bg-gray-50 dark:bg-gray-800 rounded-2xl overflow-hidden">
+                {/* Category tabs */}
+                <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-100 dark:border-gray-700 px-2 pt-2 gap-1">
+                  {EMOJI_CATEGORIES.map((cat, i) => (
+                    <button key={i} type="button"
+                      onClick={() => setEmojiTab(i)}
+                      className={`flex-shrink-0 px-2.5 py-1.5 rounded-t-lg text-[10px] font-semibold transition-colors whitespace-nowrap
+                        ${emojiTab === i
+                          ? 'bg-white dark:bg-gray-700 text-violet-600 dark:text-violet-400'
+                          : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}`}
+                    >{cat.label}</button>
+                  ))}
+                </div>
+                {/* Emoji grid */}
+                <div className="p-2.5 grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
+                  {EMOJI_CATEGORIES[emojiTab].emojis.map(emoji => (
+                    <button key={emoji} type="button"
+                      onClick={() => { setForm(f => ({ ...f, icon: emoji })); setShowEmoji(false) }}
+                      className={`text-xl p-1.5 rounded-xl hover:bg-violet-100 dark:hover:bg-gray-700 transition-colors ${form.icon === emoji ? 'bg-violet-200 dark:bg-violet-900' : ''}`}
+                    >{emoji}</button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
