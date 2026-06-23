@@ -5,7 +5,7 @@ import HabitItem from '../components/HabitItem'
 import HabitForm from '../components/HabitForm'
 import OptionSelectModal from '../components/OptionSelectModal'
 import ProgressBar from '../components/ProgressBar'
-import { getActiveDate, formatFull } from '../utils/dateUtils'
+import { getToday, getYesterday, getActiveDate, formatFull } from '../utils/dateUtils'
 
 // ── Gratitude helpers ─────────────────────────────────────────────────────────
 const GRATITUDE_KEY = 'hg_gratitude'
@@ -130,15 +130,21 @@ function HabitSection({ title, titleColor, habits, viewLogs, onCheck, onUncheck,
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Home() {
-  const today = getActiveDate()
+  const today = getToday()
+  const yesterday = getYesterday()
+  // 새벽 4시 전이면 어제까지 EXP 적립 허용
+  const isLateNight = getActiveDate() === yesterday
+  const earliestDate = isLateNight ? yesterday : today
+
   const [viewDate,     setViewDate]     = useState(today)
   const [formOpen,     setFormOpen]     = useState(false)
   const [optionTarget, setOptionTarget] = useState(null)
 
   const isPast = viewDate !== today
+  const isYesterdayView = viewDate === yesterday
 
   const {
-    habits, logs, addHabit, checkHabit, uncheckHabit, setPastLog,
+    habits, logs, addHabit, checkHabit, uncheckHabit,
     getCoreCompletionRate, getTodayExp,
     getCurrentStreak, getStreakMultiplier, getCreatureStage,
     getCoreHabits, getLifeHabits,
@@ -160,18 +166,10 @@ export default function Home() {
   const allDone  = habits.length > 0 && habits.every(h => viewLogs[h.id])
   const coreDone = coreHabits.every(h => viewLogs[h.id])
 
-  // Date navigation
-  const goBack = () => {
-    const d = new Date(viewDate + 'T00:00:00')
-    d.setDate(d.getDate() - 1)
-    setViewDate(d.toISOString().split('T')[0])
-  }
-  const goForward = () => {
-    if (!isPast) return
-    const d = new Date(viewDate + 'T00:00:00')
-    d.setDate(d.getDate() + 1)
-    setViewDate(d.toISOString().split('T')[0])
-  }
+  // Date navigation — 어제(새벽 4시 전만)와 오늘만 이동 가능
+  const canGoBack = viewDate > earliestDate
+  const goBack = () => { if (canGoBack) setViewDate(yesterday) }
+  const goForward = () => { if (isPast) setViewDate(today) }
 
   // Habit toggle handlers
   const fireToast = (result) => {
@@ -189,17 +187,16 @@ export default function Home() {
   }
 
   const handleCheck = (habit) => {
-    if (isPast) { setPastLog(viewDate, habit.id, true); return }
     if (habit.options?.length > 0) { setOptionTarget(habit); return }
-    fireToast(checkHabit(habit))
+    // 어제(새벽 4시 전): EXP 정상 적립, targetDate 전달
+    fireToast(checkHabit(habit, null, isYesterdayView ? viewDate : null))
   }
   const handleUncheck = (habit) => {
-    if (isPast) { setPastLog(viewDate, habit.id, false); return }
-    uncheckHabit(habit)
+    uncheckHabit(habit, isYesterdayView ? viewDate : null)
   }
   const handleOptionConfirm = (selectedOptions) => {
     const habit = optionTarget; setOptionTarget(null)
-    fireToast(checkHabit(habit, selectedOptions))
+    fireToast(checkHabit(habit, selectedOptions, isYesterdayView ? viewDate : null))
   }
   const handleAddHabit = (data) => {
     addHabit(data); showToast('✅ 습관이 추가되었어요', 'success'); setFormOpen(false)
@@ -210,8 +207,8 @@ export default function Home() {
 
       {/* Date navigation header */}
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={goBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 shadow-sm hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xl font-light flex-shrink-0">
+        <button onClick={goBack} disabled={!canGoBack}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 shadow-sm hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xl font-light flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
           ‹
         </button>
         <div className="flex-1 min-w-0 text-center">
@@ -238,8 +235,8 @@ export default function Home() {
       {/* Past mode notice */}
       {isPast && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl px-4 py-2.5 mb-4 flex items-center gap-2">
-          <span className="text-sm">📝</span>
-          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">기록 수정 중 · EXP 변동 없이 체크만 바뀌어요</p>
+          <span className="text-sm">🌙</span>
+          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">어제 기록 · EXP 정상 적립돼요</p>
           <button onClick={() => setViewDate(today)}
             className="ml-auto text-[10px] text-blue-500 dark:text-blue-400 font-bold underline">오늘로</button>
         </div>
