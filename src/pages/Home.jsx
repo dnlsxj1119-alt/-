@@ -5,7 +5,7 @@ import HabitItem from '../components/HabitItem'
 import HabitForm from '../components/HabitForm'
 import OptionSelectModal from '../components/OptionSelectModal'
 import ProgressBar from '../components/ProgressBar'
-import { getToday, formatFull } from '../utils/dateUtils'
+import { getActiveDate, formatFull } from '../utils/dateUtils'
 
 // ── Gratitude helpers ─────────────────────────────────────────────────────────
 const GRATITUDE_KEY = 'hg_gratitude'
@@ -130,7 +130,7 @@ function HabitSection({ title, titleColor, habits, viewLogs, onCheck, onUncheck,
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Home() {
-  const today = getToday()
+  const today = getActiveDate()
   const [viewDate,     setViewDate]     = useState(today)
   const [formOpen,     setFormOpen]     = useState(false)
   const [optionTarget, setOptionTarget] = useState(null)

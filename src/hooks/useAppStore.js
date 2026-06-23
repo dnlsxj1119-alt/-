@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { DIFFICULTIES, CREATURE_STAGES, BADGES, LIFE_MILESTONES, STORAGE_KEYS } from '../utils/constants'
-import { getToday, getYesterday, isYesterday, getLast30Days } from '../utils/dateUtils'
+import { getToday, getActiveDate, subtractDay, getLast30Days } from '../utils/dateUtils'
 
 const load = (key, def) => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def }
@@ -69,11 +69,12 @@ export function useAppStore() {
   const getStreakMultiplier = (streak) => streak >= 7 ? 2.0 : streak >= 3 ? 1.5 : 1.0
 
   const getCurrentStreak = useCallback(() => {
-    const today = getToday(); const yesterday = getYesterday()
-    return (gameState.lastCheckDate === today || gameState.lastCheckDate === yesterday) ? gameState.streak : 0
+    const active = getActiveDate()
+    const activeYesterday = subtractDay(active)
+    return (gameState.lastCheckDate === active || gameState.lastCheckDate === activeYesterday) ? gameState.streak : 0
   }, [gameState])
 
-  const getTodayLogs    = useCallback(() => logs[getToday()] || {}, [logs])
+  const getTodayLogs    = useCallback(() => logs[getActiveDate()] || {}, [logs])
   const getCoreHabits   = useCallback(() => habits.filter(isCore), [habits])
   const getLifeHabits   = useCallback(() => habits.filter(isLife), [habits])
 
@@ -81,7 +82,7 @@ export function useAppStore() {
   const getCoreCompletionRate = useCallback(() => {
     const core = habits.filter(isCore)
     if (!core.length) return 0
-    const tl = logs[getToday()] || {}
+    const tl = logs[getActiveDate()] || {}
     return core.filter(h => tl[h.id]).length / core.length
   }, [habits, logs])
 
@@ -105,7 +106,7 @@ export function useAppStore() {
   }, [getLifeHabitDays])
 
   const getTodayExp = useCallback(() => {
-    const tl = logs[getToday()] || {}
+    const tl = logs[getActiveDate()] || {}
     const m  = getStreakMultiplier(gameState.streak)
     return habits.filter(isCore).reduce(
       (s, h) => tl[h.id] ? s + Math.floor((DIFFICULTIES[h.difficulty]?.exp ?? 10) * m) : s, 0
@@ -114,7 +115,7 @@ export function useAppStore() {
 
   // ── checkHabit ───────────────────────────────────────────────────────────
   const checkHabit = useCallback((habit, selectedOptions = null) => {
-    const today    = getToday()
+    const today    = getActiveDate()
     const todayLogs = logs[today] || {}
     if (todayLogs[habit.id]) return null
 
@@ -154,8 +155,9 @@ export function useAppStore() {
     let newStreak = gameState.streak
     if (isFirstCoreToday) {
       const lcd = gameState.lastCheckDate
-      if (!lcd || (!isYesterday(lcd) && lcd !== today)) newStreak = 1
-      else if (isYesterday(lcd)) newStreak = gameState.streak + 1
+      const activeYesterday = subtractDay(today)
+      if (!lcd || (lcd !== activeYesterday && lcd !== today)) newStreak = 1
+      else if (lcd === activeYesterday) newStreak = gameState.streak + 1
     }
 
     const multiplier   = getStreakMultiplier(newStreak)
@@ -197,7 +199,7 @@ export function useAppStore() {
   }, [logs, gameState, habits, habitatItems, getLifeHabitDays])
 
   const uncheckHabit = useCallback((habit) => {
-    const today     = getToday()
+    const today     = getActiveDate()
     const todayLogs = { ...logs[today] || {} }
     if (!todayLogs[habit.id]) return
 
