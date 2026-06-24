@@ -18,11 +18,11 @@ export const LIFE_MILESTONES = [
 ]
 
 export const CREATURE_STAGES = [
-  { min: 0,    max: 500,      emoji: '🥚', sadEmoji: '🥚', name: '알',     stage: 1, desc: '따뜻하게 품어주세요!' },
-  { min: 501,  max: 1500,     emoji: '🐣', sadEmoji: '🐣', name: '부화 중', stage: 2, desc: '조금씩 자라고 있어요!' },
-  { min: 1501, max: 3500,     emoji: '🐥', sadEmoji: '😔', name: '새끼',   stage: 3, desc: '건강하게 자라고 있어요!' },
-  { min: 3501, max: 7000,     emoji: '🦋', sadEmoji: '🥱', name: '성체',   stage: 4, desc: '아름답게 성장했어요!' },
-  { min: 7001, max: Infinity, emoji: '✨', sadEmoji: '✨', name: '전설',   stage: 5, desc: '최강의 존재가 되었어요!' },
+  { min: 0,    max: 300,      emoji: '🥚', sadEmoji: '🥚', name: '알',     stage: 1, desc: '따뜻하게 품어주세요!' },
+  { min: 301,  max: 900,      emoji: '🐣', sadEmoji: '🐣', name: '부화 중', stage: 2, desc: '조금씩 자라고 있어요!' },
+  { min: 901,  max: 2100,     emoji: '🐥', sadEmoji: '😔', name: '새끼',   stage: 3, desc: '건강하게 자라고 있어요!' },
+  { min: 2101, max: 5500,     emoji: '🦋', sadEmoji: '🥱', name: '성체',   stage: 4, desc: '아름답게 성장했어요!' },
+  { min: 5501, max: Infinity, emoji: '✨', sadEmoji: '✨', name: '전설',   stage: 5, desc: '최강의 존재가 되었어요!' },
 ]
 
 export const BADGES = [

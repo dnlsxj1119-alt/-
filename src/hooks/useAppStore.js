@@ -66,7 +66,8 @@ export function useAppStore() {
   }, [habits])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const getStreakMultiplier = (streak) => streak >= 7 ? 2.0 : streak >= 3 ? 1.5 : 1.0
+  const STREAK_MILESTONES = { 3: 1.3, 7: 1.5, 14: 1.5, 21: 1.5, 30: 2.0, 60: 2.0, 100: 3.0 }
+  const getStreakMultiplier = (streak) => STREAK_MILESTONES[streak] ?? 1.0
 
   const getCurrentStreak = useCallback(() => {
     const today = getToday(); const yesterday = getYesterday()
