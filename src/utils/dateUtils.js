@@ -12,8 +12,8 @@ export const getYesterday = () => {
 
 export const isYesterday = (dateStr) => getYesterday() === dateStr
 
-// 새벽 4시 이전이면 전날을 "오늘"로 취급 (자정 이후 기입 지원)
-const LATE_CUTOFF_HOUR = 4
+// 낮 12시 이전이면 전날을 "오늘"로 취급 (다음날 오전 기입 지원)
+const LATE_CUTOFF_HOUR = 12
 
 export const getActiveDate = () => {
   const now = new Date()

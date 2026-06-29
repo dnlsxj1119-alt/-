@@ -132,7 +132,7 @@ function HabitSection({ title, titleColor, habits, viewLogs, onCheck, onUncheck,
 export default function Home() {
   const today = getToday()
   const yesterday = getYesterday()
-  // 새벽 4시 전이면 어제까지 EXP 적립 허용
+  // 낮 12시 전이면 어제까지 EXP 적립 허용
   const isLateNight = getActiveDate() === yesterday
   const earliestDate = isLateNight ? yesterday : today
 
@@ -166,7 +166,7 @@ export default function Home() {
   const allDone  = habits.length > 0 && habits.every(h => viewLogs[h.id])
   const coreDone = coreHabits.every(h => viewLogs[h.id])
 
-  // Date navigation — 어제(새벽 4시 전만)와 오늘만 이동 가능
+  // Date navigation — 어제(낮 12시 전까지)와 오늘만 이동 가능
   const canGoBack = viewDate > earliestDate
   const goBack = () => { if (canGoBack) setViewDate(yesterday) }
   const goForward = () => { if (isPast) setViewDate(today) }
