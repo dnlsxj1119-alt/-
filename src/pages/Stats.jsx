@@ -137,7 +137,7 @@ function GratitudeLog() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{content}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{content}</p>
               )}
             </div>
           ))}

@@ -63,7 +63,7 @@ function GratitudeEntry({ date }) {
           </div>
         </div>
       ) : content ? (
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{content}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{content}</p>
       ) : (
         <button onClick={startEdit}
           className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-400 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
