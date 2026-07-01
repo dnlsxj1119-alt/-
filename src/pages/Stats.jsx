@@ -96,12 +96,33 @@ function GratitudeLog() {
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Add today button if today not yet written */}
+          {/* Add today button / inline form if today not yet written */}
           {!all[today] && (
-            <button onClick={handleAddToday}
-              className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-500 dark:text-amber-400 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
-              + 오늘의 감사 한 줄 추가
-            </button>
+            editDate === today ? (
+              <div className="rounded-2xl p-3.5 bg-amber-50 dark:bg-amber-900/20">
+                <p className="text-[10px] font-semibold text-amber-500 dark:text-amber-400 mb-2">오늘 감사 한 줄</p>
+                <textarea
+                  ref={textRef}
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  maxLength={100}
+                  rows={2}
+                  placeholder="감사한 일을 한 줄로 적어보세요"
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none placeholder-gray-400"
+                />
+                <div className="flex gap-2 mt-2">
+                  <button onClick={handleSave}
+                    className="flex-1 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-white text-xs font-bold active:scale-95 transition-all">저장</button>
+                  <button onClick={handleCancel}
+                    className="flex-1 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 text-xs font-semibold transition-colors">취소</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={handleAddToday}
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/40 text-amber-500 dark:text-amber-400 text-xs font-medium hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all">
+                + 오늘의 감사 한 줄 추가
+              </button>
+            )
           )}
 
           {visible.map(([date, content]) => (
