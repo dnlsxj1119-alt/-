@@ -7,17 +7,20 @@ export async function onRequestPut({ params, request, env }) {
 
   let body
   try { body = await request.json() } catch { return Response.json({ error: 'bad json' }, { status: 400 }) }
-  const { text = '', goal, updatedAt, deleted = false } = body
-  if (typeof text !== 'string' || !Number.isInteger(goal) || goal <= 0 || typeof updatedAt !== 'string') {
+  const { text = '', goal, updatedAt, deleted = false, scoredChars = null } = body
+  if (typeof text !== 'string' || !Number.isInteger(goal) || goal <= 0 || typeof updatedAt !== 'string'
+      || (scoredChars !== null && !(Number.isInteger(scoredChars) && scoredChars >= 0))) {
     return Response.json({ error: 'bad body' }, { status: 400 })
   }
 
   await env.DB.prepare(`
-    INSERT INTO writings (date, text, goal, updated_at, deleted) VALUES (?1, ?2, ?3, ?4, ?5)
-    ON CONFLICT(date) DO UPDATE SET text = ?2, goal = ?3, updated_at = ?4, deleted = ?5
+    INSERT INTO writings (date, text, goal, updated_at, deleted, scored_chars) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+    ON CONFLICT(date) DO UPDATE SET text = ?2, goal = ?3, updated_at = ?4, deleted = ?5, scored_chars = ?6
     WHERE excluded.updated_at > writings.updated_at
-  `).bind(date, deleted ? '' : text, goal, updatedAt, deleted ? 1 : 0).run()
+  `).bind(date, deleted ? '' : text, goal, updatedAt, deleted ? 1 : 0, scoredChars).run()
 
-  const row = await env.DB.prepare('SELECT text, goal, updated_at, deleted FROM writings WHERE date = ?1').bind(date).first()
-  return Response.json({ date, text: row.text, goal: row.goal, updatedAt: row.updated_at, deleted: !!row.deleted })
+  const row = await env.DB.prepare('SELECT text, goal, updated_at, deleted, scored_chars FROM writings WHERE date = ?1').bind(date).first()
+  const res = { date, text: row.text, goal: row.goal, updatedAt: row.updated_at, deleted: !!row.deleted }
+  if (row.scored_chars !== null) res.scoredChars = row.scored_chars
+  return Response.json(res)
 }

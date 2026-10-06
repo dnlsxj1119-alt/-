@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
-import { countChars } from '../hooks/useAppStore'
+import { countChars, scoredChars } from '../hooks/useAppStore'
 import CreatureDisplay from '../components/CreatureDisplay'
 import ProgressBar from '../components/ProgressBar'
 import CalendarModal from '../components/CalendarModal'
@@ -33,8 +33,9 @@ export default function Home() {
   const [promptOffset, setPromptOffset] = useState(0)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const isPast = viewDate !== today
-  // 쓰기는 오늘 + (낮 12시 전) 어제만. 그 이전 글은 읽기 전용
+  // 오늘 + (낮 12시 전) 어제 글만 기록·EXP에 반영. 그 이전 글은 내용만 수정
   const editable = !isPast || (isLateNight && viewDate === yesterday)
+  const locked   = !editable
 
   const {
     writings, saveWriting, settings, syncStatus,
@@ -53,11 +54,11 @@ export default function Home() {
     el.style.height = `${Math.max(240, el.scrollHeight)}px`
   }, [text])
 
-  const handleChange = (e) => { if (editable) saveWriting(viewDate, e.target.value) }
+  const handleChange = (e) => saveWriting(viewDate, e.target.value, { locked })
   const changeDate   = (date) => { setViewDate(date); setPromptOffset(0) }
 
   const goal       = entry?.goal ?? settings.goal
-  const chars      = countChars(text)
+  const chars      = locked ? scoredChars(entry) : countChars(text)
   const rate       = Math.min(1, chars / goal)
   const done       = chars >= goal
   const streak     = getCurrentStreak()
@@ -101,9 +102,9 @@ export default function Home() {
       {/* Past mode notice */}
       {isPast && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl px-4 py-2.5 mb-4 flex items-center gap-2">
-          <span className="text-sm">{editable ? '🌙' : '📖'}</span>
+          <span className="text-sm">{editable ? '🌙' : '✏️'}</span>
           <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-            {editable ? '낮 12시 전까지 어제 글을 이어 쓸 수 있어요' : '지난 글은 읽기만 할 수 있어요'}
+            {editable ? '낮 12시 전까지 어제 글을 이어 쓸 수 있어요' : '지난 글 수정 · 연속 기록과 EXP는 그대로예요'}
           </p>
           <button onClick={() => changeDate(today)}
             className="ml-auto text-[10px] text-blue-500 dark:text-blue-400 font-bold underline">오늘로</button>
@@ -158,14 +159,13 @@ export default function Home() {
           ref={textRef}
           value={text}
           onChange={handleChange}
-          readOnly={!editable}
-          placeholder={editable ? '아무 말이나 괜찮아요. 일단 쓰기 시작해보세요.' : '이 날은 쓴 글이 없어요'}
+          placeholder={editable ? '아무 말이나 괜찮아요. 일단 쓰기 시작해보세요.' : '이 날은 쓴 글이 없어요. 지금 남겨도 기록·EXP에는 반영되지 않아요.'}
           className="w-full bg-transparent text-[15px] leading-7 text-gray-800 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none resize-none"
           style={{ minHeight: 240 }}
         />
         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500">
           <span>공백 포함 {text.length.toLocaleString()}자</span>
-          <span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{editable ? SYNC_LABEL[syncStatus] : '읽기 전용'}</span>
+          <span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{SYNC_LABEL[syncStatus]}</span>
         </div>
       </div>
 

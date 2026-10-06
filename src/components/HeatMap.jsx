@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useApp } from '../context/AppContext'
-import { countChars } from '../hooks/useAppStore'
+import { countChars, scoredChars } from '../hooks/useAppStore'
 import { getToday, getLast90Days } from '../utils/dateUtils'
 
 const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
@@ -26,7 +26,7 @@ export default function HeatMap({ onSelect }) {
     days.forEach(date => {
       const entry = writings[date]
       const chars = entry ? countChars(entry.text) : 0
-      const rate  = entry ? Math.min(1, chars / entry.goal) : 0
+      const rate  = entry ? Math.min(1, scoredChars(entry) / entry.goal) : 0
       cells.push({ date, rate, chars, isToday: date === today })
     })
     while (cells.length % 7 !== 0) cells.push(null)

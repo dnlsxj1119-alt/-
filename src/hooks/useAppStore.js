@@ -22,13 +22,18 @@ function stageForExp(exp) {
 const STREAK_MILESTONES = { 3: 1.3, 7: 1.5, 14: 1.5, 21: 1.5, 30: 2.0, 60: 2.0, 100: 3.0 }
 const getStreakMultiplier = (streak) => STREAK_MILESTONES[streak] ?? 1.0
 
-const isDone = (entry) => !!entry && countChars(entry.text) >= entry.goal
+/**
+ * 기록·EXP 계산에 쓰는 글자 수. 마감 지난 글을 고치면 고치기 직전 글자 수가
+ * scoredChars 로 고정돼서, 나중에 고쳐도 연속 기록·EXP는 바뀌지 않는다.
+ */
+export const scoredChars = (entry) => entry?.scoredChars ?? countChars(entry?.text)
+export const isDone = (entry) => !!entry && scoredChars(entry) >= entry.goal
 
 // 삭제 표시(tombstone)는 동기화용으로만 보관하고 화면·계산에서는 뺀다
 const visibleOf = (raw) => Object.fromEntries(Object.entries(raw).filter(([, e]) => !e.deleted))
 
 function dayExp(entry, streak) {
-  const chars = countChars(entry.text)
+  const chars = scoredChars(entry)
   if (chars === 0) return 0
   if (chars < entry.goal) return EXP_RULES.partial
   const bonus = Math.min(EXP_RULES.bonusCap, Math.floor((chars - entry.goal) / 100) * EXP_RULES.bonusPer100)
@@ -222,12 +227,22 @@ export function useAppStore() {
   }, [settings, writings, commitRaw, scheduleFlush])
 
   // ── Writing ──────────────────────────────────────────────────────────────
-  const saveWriting = useCallback((date, text) => {
+  // locked: 마감 지난 날짜 (내용만 고치고 점수는 고정)
+  const saveWriting = useCallback((date, text, { locked = false } = {}) => {
     const prev = writings[date]
     const updatedAt = new Date().toISOString()
-    const entry = text.trim()
-      ? { text, goal: settings.goal, updatedAt }
-      : { text: '', goal: settings.goal, updatedAt, deleted: true }
+    let entry
+    if (locked) {
+      const scored = prev ? scoredChars(prev) : 0
+      const goal   = prev?.goal ?? settings.goal
+      entry = text.trim() || scored > 0
+        ? { text, goal, updatedAt, scoredChars: scored }
+        : { text: '', goal, updatedAt, deleted: true }
+    } else {
+      entry = text.trim()
+        ? { text, goal: settings.goal, updatedAt }
+        : { text: '', goal: settings.goal, updatedAt, deleted: true }
+    }
     const nextRaw = { ...rawRef.current, [date]: entry }
     commitRaw(nextRaw)
     markDirty([date]); scheduleFlush()

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { countChars } from '../hooks/useAppStore'
+import { isDone } from '../hooks/useAppStore'
 import { getToday } from '../utils/dateUtils'
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -23,7 +23,7 @@ export default function CalendarModal({ writings, selected, onSelect, onClose })
   }
 
   const monthEntries = Object.entries(writings).filter(([d]) => d.startsWith(`${year}-${pad(month + 1)}`))
-  const monthDone    = monthEntries.filter(([, e]) => countChars(e.text) >= e.goal).length
+  const monthDone    = monthEntries.filter(([, e]) => isDone(e)).length
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -54,7 +54,7 @@ export default function CalendarModal({ writings, selected, onSelect, onClose })
             if (!day) return <div key={i} />
             const date    = ymd(year, month, day)
             const entry   = writings[date]
-            const done    = entry && countChars(entry.text) >= entry.goal
+            const done    = isDone(entry)
             const future  = date > today
             const isSel   = date === selected
             const isToday = date === today
