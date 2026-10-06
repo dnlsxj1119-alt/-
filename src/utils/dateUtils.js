@@ -31,6 +31,12 @@ export const subtractDay = (dateStr) => {
   return localStr(d)
 }
 
+export const addDay = (dateStr) => {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + 1)
+  return localStr(d)
+}
+
 export const getLast30Days = () => {
   const days = []
   for (let i = 29; i >= 0; i--) {

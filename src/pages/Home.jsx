@@ -3,8 +3,9 @@ import { useApp } from '../context/AppContext'
 import { countChars } from '../hooks/useAppStore'
 import CreatureDisplay from '../components/CreatureDisplay'
 import ProgressBar from '../components/ProgressBar'
+import CalendarModal from '../components/CalendarModal'
 import { WRITING_PROMPTS } from '../utils/constants'
-import { getToday, getYesterday, getActiveDate, formatFull } from '../utils/dateUtils'
+import { getToday, getYesterday, getActiveDate, subtractDay, addDay, formatFull } from '../utils/dateUtils'
 
 const SYNC_LABEL = {
   idle:    '',
@@ -27,11 +28,13 @@ export default function Home() {
   const yesterday = getYesterday()
   // 낮 12시 전이면 어제 글도 이어 쓸 수 있음
   const isLateNight = getActiveDate() === yesterday
-  const earliestDate = isLateNight ? yesterday : today
 
   const [viewDate,     setViewDate]     = useState(today)
   const [promptOffset, setPromptOffset] = useState(0)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const isPast = viewDate !== today
+  // 쓰기는 오늘 + (낮 12시 전) 어제만. 그 이전 글은 읽기 전용
+  const editable = !isPast || (isLateNight && viewDate === yesterday)
 
   const {
     writings, saveWriting, settings, syncStatus,
@@ -50,7 +53,7 @@ export default function Home() {
     el.style.height = `${Math.max(240, el.scrollHeight)}px`
   }, [text])
 
-  const handleChange = (e) => saveWriting(viewDate, e.target.value)
+  const handleChange = (e) => { if (editable) saveWriting(viewDate, e.target.value) }
   const changeDate   = (date) => { setViewDate(date); setPromptOffset(0) }
 
   const goal       = entry?.goal ?? settings.goal
@@ -65,27 +68,26 @@ export default function Home() {
 
   const prompt = WRITING_PROMPTS[(promptIndexFor(viewDate) + promptOffset) % WRITING_PROMPTS.length]
 
-  const canGoBack = viewDate > earliestDate
-  const goBack    = () => { if (canGoBack) changeDate(yesterday) }
-  const goForward = () => { if (isPast) changeDate(today) }
+  const goBack    = () => changeDate(subtractDay(viewDate))
+  const goForward = () => { if (isPast) changeDate(addDay(viewDate)) }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 px-4 pt-6 pb-28">
 
       {/* Date navigation header */}
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={goBack} disabled={!canGoBack}
+        <button onClick={goBack}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 shadow-sm hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xl font-light flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
           ‹
         </button>
-        <div className="flex-1 min-w-0 text-center">
+        <button onClick={() => setCalendarOpen(true)} className="flex-1 min-w-0 text-center rounded-2xl py-0.5 hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors">
           <p className={`text-[10px] font-semibold ${isPast ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
-            {isPast ? '어제의 글' : '오늘의 글'}
+            {!isPast ? '오늘의 글' : viewDate === yesterday ? '어제의 글' : '지난 글'}
           </p>
           <h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate">
-            {formatFull(viewDate)} ({getDayLabel(viewDate)})
+            {formatFull(viewDate)} ({getDayLabel(viewDate)}) <span className="text-sm">📅</span>
           </h1>
-        </div>
+        </button>
         <button onClick={goForward} disabled={!isPast}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 shadow-sm hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xl font-light flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
           ›
@@ -99,8 +101,10 @@ export default function Home() {
       {/* Past mode notice */}
       {isPast && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl px-4 py-2.5 mb-4 flex items-center gap-2">
-          <span className="text-sm">🌙</span>
-          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">낮 12시 전까지 어제 글을 이어 쓸 수 있어요</p>
+          <span className="text-sm">{editable ? '🌙' : '📖'}</span>
+          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+            {editable ? '낮 12시 전까지 어제 글을 이어 쓸 수 있어요' : '지난 글은 읽기만 할 수 있어요'}
+          </p>
           <button onClick={() => changeDate(today)}
             className="ml-auto text-[10px] text-blue-500 dark:text-blue-400 font-bold underline">오늘로</button>
         </div>
@@ -138,7 +142,7 @@ export default function Home() {
       </div>
 
       {/* Prompt */}
-      <div className="flex items-start gap-2 px-1 mb-2">
+      {editable && <div className="flex items-start gap-2 px-1 mb-2">
         <p className="flex-1 text-sm text-gray-600 dark:text-gray-400 leading-snug">
           <span className="text-[10px] font-bold text-violet-500 dark:text-violet-400 mr-1.5">글감</span>{prompt}
         </p>
@@ -146,7 +150,7 @@ export default function Home() {
           className="text-[10px] text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 pt-0.5">
           ↻ 다른 글감
         </button>
-      </div>
+      </div>}
 
       {/* Editor */}
       <div className="bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-sm border border-white/50 dark:border-gray-700/50 p-4">
@@ -154,15 +158,20 @@ export default function Home() {
           ref={textRef}
           value={text}
           onChange={handleChange}
-          placeholder="아무 말이나 괜찮아요. 일단 쓰기 시작해보세요."
+          readOnly={!editable}
+          placeholder={editable ? '아무 말이나 괜찮아요. 일단 쓰기 시작해보세요.' : '이 날은 쓴 글이 없어요'}
           className="w-full bg-transparent text-[15px] leading-7 text-gray-800 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none resize-none"
           style={{ minHeight: 240 }}
         />
         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500">
           <span>공백 포함 {text.length.toLocaleString()}자</span>
-          <span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{SYNC_LABEL[syncStatus]}</span>
+          <span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{editable ? SYNC_LABEL[syncStatus] : '읽기 전용'}</span>
         </div>
       </div>
+
+      {calendarOpen && (
+        <CalendarModal writings={writings} selected={viewDate} onSelect={changeDate} onClose={() => setCalendarOpen(false)} />
+      )}
     </div>
   )
 }
