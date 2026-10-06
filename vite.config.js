@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: '습관 크리처',
-        short_name: '습관',
-        description: '매일 습관을 키우는 크리처 게임',
+        name: '글쓰기 크리처',
+        short_name: '글쓰기',
+        description: '매일 글을 쓰며 키우는 크리처',
         theme_color: '#8b5cf6',
         background_color: '#f5f3ff',
         display: 'standalone',

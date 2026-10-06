@@ -1,39 +1,34 @@
 import { useMemo } from 'react'
 import { useApp } from '../context/AppContext'
-import { getToday } from '../utils/dateUtils'
+import { countChars } from '../hooks/useAppStore'
+import { getToday, getLast90Days } from '../utils/dateUtils'
 
 const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 const DAY_LABELS = ['월','화','수','목','금','토','일']
 
 function getCellColor(rate, darkMode) {
-  if (rate === 0)    return darkMode ? 'bg-gray-700' : 'bg-gray-200'
-  if (rate < 0.5)   return darkMode ? 'bg-violet-900/70' : 'bg-violet-200'
-  if (rate < 0.8)   return darkMode ? 'bg-violet-600'    : 'bg-violet-400'
+  if (rate === 0)  return darkMode ? 'bg-gray-700' : 'bg-gray-200'
+  if (rate < 0.5)  return darkMode ? 'bg-violet-900/70' : 'bg-violet-200'
+  if (rate < 1)    return darkMode ? 'bg-violet-600'    : 'bg-violet-400'
   return darkMode ? 'bg-violet-400' : 'bg-violet-600'
 }
 
-export default function HeatMap() {
-  const { logs, habits, darkMode } = useApp()
+export default function HeatMap({ onSelect }) {
+  const { writings, darkMode } = useApp()
   const today = getToday()
 
   const { columns, monthLabels } = useMemo(() => {
-    const start = new Date()
-    start.setDate(start.getDate() - 89)
-    start.setHours(0, 0, 0, 0)
-
+    const days = getLast90Days()
     // Monday-based offset (Mon=0 … Sun=6)
-    const startDow = (start.getDay() + 6) % 7
+    const startDow = (new Date(days[0] + 'T12:00:00').getDay() + 6) % 7
     const cells = Array(startDow).fill(null)
 
-    for (let i = 0; i < 90; i++) {
-      const d = new Date(start)
-      d.setDate(start.getDate() + i)
-      const dateStr = d.toISOString().split('T')[0]
-      const dayLogs = logs[dateStr] || {}
-      const checked = Object.values(dayLogs).filter(Boolean).length
-      const rate = habits.length > 0 ? checked / habits.length : 0
-      cells.push({ date: dateStr, rate, checked, isToday: dateStr === today })
-    }
+    days.forEach(date => {
+      const entry = writings[date]
+      const chars = entry ? countChars(entry.text) : 0
+      const rate  = entry ? Math.min(1, chars / entry.goal) : 0
+      cells.push({ date, rate, chars, isToday: date === today })
+    })
     while (cells.length % 7 !== 0) cells.push(null)
 
     const cols = []
@@ -50,7 +45,7 @@ export default function HeatMap() {
     })
 
     return { columns: cols, monthLabels: labels }
-  }, [logs, habits, today])
+  }, [writings, today])
 
   return (
     <div className="overflow-x-auto pb-1">
@@ -83,9 +78,12 @@ export default function HeatMap() {
               {col.map((cell, di) => (
                 cell
                   ? (
-                    <div
+                    <button
                       key={di}
-                      title={`${cell.date}: ${Math.round(cell.rate * 100)}%`}
+                      type="button"
+                      disabled={cell.chars === 0}
+                      onClick={() => onSelect?.(cell.date)}
+                      title={`${cell.date}: ${cell.chars}자`}
                       className={`w-[11px] h-[11px] rounded-sm transition-colors
                         ${getCellColor(cell.rate, darkMode)}
                         ${cell.isToday ? 'ring-1 ring-violet-400 ring-offset-0' : ''}
@@ -100,11 +98,11 @@ export default function HeatMap() {
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-3 ml-7">
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">적음</span>
-          {[0, 0.3, 0.6, 0.9].map(r => (
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">안 씀</span>
+          {[0, 0.3, 0.6, 1].map(r => (
             <div key={r} className={`w-[11px] h-[11px] rounded-sm ${getCellColor(r, darkMode)}`} />
           ))}
-          <span className="text-[10px] text-gray-400 dark:text-gray-500">많음</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">목표 달성</span>
         </div>
       </div>
     </div>

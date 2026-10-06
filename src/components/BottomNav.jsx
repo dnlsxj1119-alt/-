@@ -1,5 +1,5 @@
 const TABS = [
-  { id: 'home',     icon: '🏠', label: '홈'    },
+  { id: 'home',     icon: '✍️', label: '글쓰기' },
   { id: 'creature', icon: '🐾', label: '크리처' },
   { id: 'stats',    icon: '📊', label: '기록'   },
   { id: 'settings', icon: '⚙️', label: '설정'  },

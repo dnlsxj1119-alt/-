@@ -1,14 +1,7 @@
 import { useState, useRef } from 'react'
 import { useApp } from '../context/AppContext'
-import HabitForm from '../components/HabitForm'
-import { DIFFICULTIES } from '../utils/constants'
+import { GOAL_OPTIONS } from '../utils/constants'
 import { useNotification } from '../hooks/useNotification'
-
-const DIFF_COLOR = {
-  easy:   'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  normal: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  hard:   'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-}
 
 function Section({ title, children }) {
   return (
@@ -45,7 +38,7 @@ function ConfirmModal({ title, desc, onConfirm, onClose }) {
 
 export default function Settings() {
   const {
-    habits, addHabit, updateHabit, deleteHabit,
+    settings, updateGoal,
     darkMode, toggleDarkMode,
     notifSettings, updateNotifSettings,
     showToast, resetAllData,
@@ -54,20 +47,9 @@ export default function Settings() {
 
   const { getPermission } = useNotification(notifSettings)
 
-  const [formOpen, setFormOpen]       = useState(false)
-  const [editHabit, setEditHabit]     = useState(null)
   const [confirmReset, setConfirmReset]   = useState(false)
   const [importConfirm, setImportConfirm] = useState(null) // pending File
   const importRef = useRef(null)
-
-  const handleSave = (data) => {
-    if (editHabit) { updateHabit(editHabit.id, data); showToast('✅ 습관이 수정되었어요', 'success') }
-    else           { addHabit(data);                  showToast('✅ 습관이 추가되었어요', 'success') }
-    setFormOpen(false); setEditHabit(null)
-  }
-
-  const handleDelete = (h) => { deleteHabit(h.id); showToast('🗑️ 습관이 삭제되었어요', 'info') }
-  const handleEdit   = (h) => { setEditHabit(h); setFormOpen(true) }
 
   // ── Notification ──────────────────────────────────────────────────────────
   const handleNotifToggle = async () => {
@@ -159,53 +141,22 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Habits */}
-      <Section>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-          <div>
-            <p className="text-sm font-bold text-gray-800 dark:text-white">나의 습관</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{habits.length}개 등록됨</p>
-          </div>
-          <button onClick={() => { setEditHabit(null); setFormOpen(true) }}
-            className="flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 active:scale-95 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all"
-          >
-            <span className="text-base leading-none">+</span>습관 추가
-          </button>
-        </div>
-
-        {habits.length === 0 ? (
-          <div className="flex flex-col items-center py-10 text-center">
-            <span className="text-4xl mb-2">🌱</span>
-            <p className="text-sm text-gray-400 dark:text-gray-500">아직 습관이 없어요</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
-            {habits.map(h => (
-              <div key={h.id} className="flex items-center gap-3 px-5 py-3.5">
-                <span className="text-xl flex-shrink-0">{h.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{h.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{h.category}</span>
-                    <span className="text-gray-200 dark:text-gray-700">·</span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${DIFF_COLOR[h.difficulty]}`}>
-                      {DIFFICULTIES[h.difficulty]?.label}
-                    </span>
-                    {h.options?.length > 0 && (
-                      <span className="text-[10px] text-violet-400 font-medium">· {h.options.length}개 옵션</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button onClick={() => handleEdit(h)}
-                    className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-sm">✏️</button>
-                  <button onClick={() => handleDelete(h)}
-                    className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm">🗑️</button>
-                </div>
-              </div>
+      {/* Daily goal */}
+      <Section title="하루 목표">
+        <div className="px-5 pb-4">
+          <div className="grid grid-cols-4 gap-2">
+            {GOAL_OPTIONS.map(g => (
+              <button key={g} onClick={() => { updateGoal(g); showToast(`🎯 하루 ${g.toLocaleString()}자로 바꿨어요`, 'success') }}
+                className={`py-2.5 rounded-2xl text-sm font-bold transition-all
+                  ${settings.goal === g
+                    ? 'bg-violet-500 text-white shadow-sm'
+                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 hover:bg-violet-50 dark:hover:bg-violet-900/20'}`}>
+                {g.toLocaleString()}자
+              </button>
             ))}
           </div>
-        )}
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2.5">공백 제외 글자 수 기준 · 오늘 글부터 적용돼요</p>
+        </div>
       </Section>
 
       {/* Data */}
@@ -245,15 +196,10 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Modals */}
-      {formOpen && (
-        <HabitForm habit={editHabit} onSave={handleSave} onClose={() => { setFormOpen(false); setEditHabit(null) }} />
-      )}
-
-      {confirmReset && (
+            {confirmReset && (
         <ConfirmModal
           title="정말 초기화할까요?"
-          desc="모든 습관, 기록, EXP가 삭제돼요. 되돌릴 수 없어요!"
+          desc="쓴 글과 EXP가 모두 삭제돼요. 되돌릴 수 없어요!"
           onConfirm={() => { resetAllData(); setConfirmReset(false); showToast('🔄 초기화 완료', 'info') }}
           onClose={() => setConfirmReset(false)}
         />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-const NOTIF_TITLE = '습관 크리처 🐾'
-const NOTIF_BODY  = '오늘 습관 체크할 시간이에요! 크리처가 기다리고 있어요.'
+const NOTIF_TITLE = '글쓰기 크리처 ✍️'
+const NOTIF_BODY  = '오늘의 글을 쓸 시간이에요! 크리처가 기다리고 있어요.'
 
 export function useNotification(settings) {
   const timerRef = useRef(null)
@@ -36,7 +36,7 @@ export function useNotification(settings) {
           body: NOTIF_BODY,
         })
       } else {
-        new Notification(NOTIF_TITLE, { body: NOTIF_BODY, icon: '/icon.svg', badge: '/icon.svg', tag: 'daily-habit', renotify: true })
+        new Notification(NOTIF_TITLE, { body: NOTIF_BODY, icon: '/icon.svg', badge: '/icon.svg', tag: 'daily-writing', renotify: true })
       }
       // Re-schedule for tomorrow
       schedule(timeStr)
