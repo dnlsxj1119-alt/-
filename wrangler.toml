@@ -1,0 +1,8 @@
+name = "growinghabit"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-06"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "writing-creature"
+database_id = "67f8ee75-c778-433e-bb50-50d24cb83238"

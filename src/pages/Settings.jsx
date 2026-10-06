@@ -39,6 +39,7 @@ function ConfirmModal({ title, desc, onConfirm, onClose }) {
 export default function Settings() {
   const {
     settings, updateGoal,
+    logout, syncStatus, sync,
     darkMode, toggleDarkMode,
     notifSettings, updateNotifSettings,
     showToast, resetAllData,
@@ -185,6 +186,22 @@ export default function Settings() {
         </div>
       </Section>
 
+      {/* Account */}
+      <Section title="동기화">
+        <div className="px-5 pb-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {syncStatus === 'offline' ? '📴 서버에 연결할 수 없어요 (기기에 저장 중)' : '☁️ 서버(DB)에 저장되고 있어요'}
+            </p>
+            <button onClick={sync} className="text-xs font-semibold text-violet-500 px-2 py-1">지금 동기화</button>
+          </div>
+          <button onClick={logout}
+            className="w-full py-2.5 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            로그아웃
+          </button>
+        </div>
+      </Section>
+
       {/* Danger */}
       <Section title="위험 구역">
         <div className="px-5 pb-4">
@@ -199,7 +216,7 @@ export default function Settings() {
             {confirmReset && (
         <ConfirmModal
           title="정말 초기화할까요?"
-          desc="쓴 글과 EXP가 모두 삭제돼요. 되돌릴 수 없어요!"
+          desc="서버와 모든 기기에서 글과 EXP가 삭제돼요. 되돌릴 수 없어요!"
           onConfirm={() => { resetAllData(); setConfirmReset(false); showToast('🔄 초기화 완료', 'info') }}
           onClose={() => setConfirmReset(false)}
         />

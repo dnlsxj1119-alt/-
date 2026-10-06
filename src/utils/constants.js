@@ -60,5 +60,7 @@ export const STORAGE_KEYS = {
   WRITINGS:  'wg_writings',
   SETTINGS:  'wg_settings',
   NOTIF:     'wg_notif',
+  AUTH:      'wg_key',
+  DIRTY:     'wg_dirty',
   DARK_MODE: 'hg_dark',
 }

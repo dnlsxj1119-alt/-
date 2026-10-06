@@ -6,6 +6,14 @@ import ProgressBar from '../components/ProgressBar'
 import { WRITING_PROMPTS } from '../utils/constants'
 import { getToday, getYesterday, getActiveDate, formatFull } from '../utils/dateUtils'
 
+const SYNC_LABEL = {
+  idle:    '',
+  syncing: '☁️ 동기화 중…',
+  pending: '☁️ 저장 중…',
+  synced:  '☁️ 저장됨',
+  offline: '📴 오프라인 · 기기에 저장됨',
+}
+
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const getDayLabel = (dateStr) => DAYS[new Date(dateStr + 'T00:00:00').getDay()]
 
@@ -26,7 +34,7 @@ export default function Home() {
   const isPast = viewDate !== today
 
   const {
-    writings, saveWriting, settings,
+    writings, saveWriting, settings, syncStatus,
     gameState, getCurrentStreak, getStreakMultiplier, getCreatureStage, getTodayRate,
   } = useApp()
 
@@ -152,7 +160,7 @@ export default function Home() {
         />
         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500">
           <span>공백 포함 {text.length.toLocaleString()}자</span>
-          <span>{text.trim() ? '✓ 자동 저장됨' : ''}</span>
+          <span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{SYNC_LABEL[syncStatus]}</span>
         </div>
       </div>
     </div>

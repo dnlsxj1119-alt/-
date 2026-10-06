@@ -9,13 +9,16 @@ import Home from './pages/Home'
 import Creature from './pages/Creature'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
+import Login from './pages/Login'
 
 function AppContent() {
   const [tab, setTab] = useState('home')
-  const { evolutionAlert, showConfetti, notifSettings } = useApp()
+  const { evolutionAlert, showConfetti, notifSettings, authKey } = useApp()
 
   // Activate daily notification scheduling
   useNotification(notifSettings)
+
+  if (!authKey) return <Login />
 
   return (
     <div className="relative flex justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
