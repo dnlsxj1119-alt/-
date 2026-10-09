@@ -18,9 +18,9 @@ const SYNC_LABEL = {
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const getDayLabel = (dateStr) => DAYS[new Date(dateStr + 'T00:00:00').getDay()]
 
-// 날짜마다 고정된 글감 (같은 날엔 같은 글감)
+// 날짜마다 고정된 글감 (같은 날엔 같은 글감, 날마다 다른 분야로 섞이게 7칸씩 건너뜀)
 const promptIndexFor = (dateStr) =>
-  [...dateStr].reduce((s, c) => s + c.charCodeAt(0), 0) % WRITING_PROMPTS.length
+  (Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000) * 7) % WRITING_PROMPTS.length
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Home() {
@@ -143,14 +143,17 @@ export default function Home() {
       </div>
 
       {/* Prompt */}
-      {editable && <div className="flex items-start gap-2 px-1 mb-2">
-        <p className="flex-1 text-sm text-gray-600 dark:text-gray-400 leading-snug">
-          <span className="text-[10px] font-bold text-violet-500 dark:text-violet-400 mr-1.5">글감</span>{prompt}
-        </p>
-        <button onClick={() => setPromptOffset(o => o + 1)}
-          className="text-[10px] text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 pt-0.5">
-          ↻ 다른 글감
-        </button>
+      {editable && <div className="px-1 mb-2">
+        <div className="flex items-start gap-2">
+          <p className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
+            <span className="inline-block text-[10px] font-bold text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/40 px-1.5 py-0.5 rounded-md mr-1.5 align-[1px]">{prompt.cat}</span>{prompt.q}
+          </p>
+          <button onClick={() => setPromptOffset(o => o + 1)}
+            className="text-[10px] text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 pt-0.5">
+            ↻ 다른 글감
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">입장 → 근거 2~3개 → 예상 반론 → 재반박 → 결론</p>
       </div>}
 
       {/* Editor */}
@@ -159,7 +162,7 @@ export default function Home() {
           ref={textRef}
           value={text}
           onChange={handleChange}
-          placeholder={editable ? '아무 말이나 괜찮아요. 일단 쓰기 시작해보세요.' : '이 날은 쓴 글이 없어요. 지금 남겨도 기록·EXP에는 반영되지 않아요.'}
+          placeholder={editable ? '찬성/반대 입장을 한 줄로 정하고 시작해보세요.' : '이 날은 쓴 글이 없어요. 지금 남겨도 기록·EXP에는 반영되지 않아요.'}
           className="w-full bg-transparent text-[15px] leading-7 text-gray-800 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none resize-none"
           style={{ minHeight: 240 }}
         />
