@@ -4,7 +4,7 @@ import { countChars, scoredChars } from '../hooks/useAppStore'
 import CreatureDisplay from '../components/CreatureDisplay'
 import ProgressBar from '../components/ProgressBar'
 import CalendarModal from '../components/CalendarModal'
-import { WRITING_PROMPTS } from '../utils/constants'
+import { DEBATE_PROMPTS, EASY_PROMPTS } from '../utils/constants'
 import { getToday, getYesterday, getActiveDate, subtractDay, addDay, formatFull } from '../utils/dateUtils'
 
 const SYNC_LABEL = {
@@ -19,8 +19,22 @@ const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const getDayLabel = (dateStr) => DAYS[new Date(dateStr + 'T00:00:00').getDay()]
 
 // 날짜마다 고정된 글감 (같은 날엔 같은 글감, 날마다 다른 분야로 섞이게 7칸씩 건너뜀)
-const promptIndexFor = (dateStr) =>
-  (Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000) * 7) % WRITING_PROMPTS.length
+const dayNumber = (dateStr) => Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000)
+const pick = (list, dateStr, offset) => list[(dayNumber(dateStr) * 7 + offset) % list.length]
+
+function PromptRow({ tag, tagClass, text, sub, onNext }) {
+  return (
+    <div className="flex items-start gap-2 bg-white/60 dark:bg-gray-800/60 rounded-2xl px-3 py-2">
+      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 mt-px ${tagClass}`}>{tag}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">{text}</p>
+        {sub && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
+      </div>
+      <button onClick={onNext} aria-label="다른 글감"
+        className="text-xs text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 px-1">↻</button>
+    </div>
+  )
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Home() {
@@ -30,7 +44,8 @@ export default function Home() {
   const isLateNight = getActiveDate() === yesterday
 
   const [viewDate,     setViewDate]     = useState(today)
-  const [promptOffset, setPromptOffset] = useState(0)
+  const [debateOffset, setDebateOffset] = useState(0)
+  const [easyOffset,   setEasyOffset]   = useState(0)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const isPast = viewDate !== today
   // 오늘 + (낮 12시 전) 어제 글만 기록·EXP에 반영. 그 이전 글은 내용만 수정
@@ -55,7 +70,7 @@ export default function Home() {
   }, [text])
 
   const handleChange = (e) => saveWriting(viewDate, e.target.value, { locked })
-  const changeDate   = (date) => { setViewDate(date); setPromptOffset(0) }
+  const changeDate   = (date) => { setViewDate(date); setDebateOffset(0); setEasyOffset(0) }
 
   const goal       = entry?.goal ?? settings.goal
   const chars      = locked ? scoredChars(entry) : countChars(text)
@@ -67,7 +82,8 @@ export default function Home() {
   const todayRate  = getTodayRate()
   const dayExp     = gameState.expByDate[viewDate] || 0
 
-  const prompt = WRITING_PROMPTS[(promptIndexFor(viewDate) + promptOffset) % WRITING_PROMPTS.length]
+  const debate = pick(DEBATE_PROMPTS, viewDate, debateOffset)
+  const easy   = pick(EASY_PROMPTS, viewDate, easyOffset)
 
   const goBack    = () => changeDate(subtractDay(viewDate))
   const goForward = () => { if (isPast) changeDate(addDay(viewDate)) }
@@ -143,17 +159,13 @@ export default function Home() {
       </div>
 
       {/* Prompt */}
-      {editable && <div className="px-1 mb-2">
-        <div className="flex items-start gap-2">
-          <p className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
-            <span className="inline-block text-[10px] font-bold text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/40 px-1.5 py-0.5 rounded-md mr-1.5 align-[1px]">{prompt.cat}</span>{prompt.q}
-          </p>
-          <button onClick={() => setPromptOffset(o => o + 1)}
-            className="text-[10px] text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 pt-0.5">
-            ↻ 다른 글감
-          </button>
-        </div>
-        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">입장 → 근거 2~3개 → 예상 반론 → 재반박 → 결론</p>
+      {editable && <div className="space-y-1.5 mb-2">
+        <PromptRow tag="토론" tagClass="text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/40"
+          text={debate.q} sub={`${debate.cat} · 입장 → 근거 → 예상 반론 → 재반박 → 결론`}
+          onNext={() => setDebateOffset(o => o + 1)} />
+        <PromptRow tag="가볍게" tagClass="text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40"
+          text={easy} onNext={() => setEasyOffset(o => o + 1)} />
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">둘 중 끌리는 걸로, 아니면 아무거나 써도 돼요</p>
       </div>}
 
       {/* Editor */}
@@ -162,7 +174,7 @@ export default function Home() {
           ref={textRef}
           value={text}
           onChange={handleChange}
-          placeholder={editable ? '찬성/반대 입장을 한 줄로 정하고 시작해보세요.' : '이 날은 쓴 글이 없어요. 지금 남겨도 기록·EXP에는 반영되지 않아요.'}
+          placeholder={editable ? '아무 말이나 괜찮아요. 일단 쓰기 시작해보세요.' : '이 날은 쓴 글이 없어요. 지금 남겨도 기록·EXP에는 반영되지 않아요.'}
           className="w-full bg-transparent text-[15px] leading-7 text-gray-800 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none resize-none"
           style={{ minHeight: 240 }}
         />
