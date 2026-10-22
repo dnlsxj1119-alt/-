@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { countChars, scoredChars } from '../hooks/useAppStore'
 import CreatureDisplay from '../components/CreatureDisplay'
@@ -62,11 +62,22 @@ export default function Home() {
   const textRef = useRef(null)
 
   // 입력창 높이 자동 조절
-  useEffect(() => {
+  // height를 잠깐 auto로 줄일 때 브라우저가 스크롤을 위로 당기므로 위치를 되돌린다
+  useLayoutEffect(() => {
     const el = textRef.current
     if (!el) return
+    const scrollY = window.scrollY
     el.style.height = 'auto'
     el.style.height = `${Math.max(240, el.scrollHeight)}px`
+    window.scrollTo(0, scrollY)
+
+    // 글 끝에서 쓰는 중이면 커서 줄이 하단 메뉴에 가리지 않게 따라 내려감
+    if (document.activeElement === el && el.selectionEnd === el.value.length) {
+      const viewH  = window.visualViewport?.height ?? window.innerHeight
+      const limit  = viewH - 140 // 하단 메뉴 + 글자 수 줄
+      const bottom = el.getBoundingClientRect().bottom
+      if (bottom > limit) window.scrollBy(0, bottom - limit)
+    }
   }, [text])
 
   const handleChange = (e) => saveWriting(viewDate, e.target.value, { locked })
