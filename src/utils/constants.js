@@ -121,7 +121,8 @@ export const STORAGE_KEYS = {
   WRITINGS:  'wg_writings',
   SETTINGS:  'wg_settings',
   NOTIF:     'wg_notif',
-  AUTH:      'wg_key',
+  AUTH:      'wg_token',
+  OWNER:     'wg_owner',  // 이 기기에 저장된 글의 주인 아이디
   DIRTY:     'wg_dirty',
   DARK_MODE: 'hg_dark',
 }

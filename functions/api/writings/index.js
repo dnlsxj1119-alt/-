@@ -1,8 +1,9 @@
 // GET /api/writings — 전체 글 + 설정 (삭제 표시된 글 포함, 기기 간 삭제 동기화용)
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ env, data }) {
+  const uid = data.user.id
   const [{ results: rows }, { results: settingRows }] = await Promise.all([
-    env.DB.prepare('SELECT date, text, rebuttal, goal, updated_at, deleted, scored_chars FROM writings').all(),
-    env.DB.prepare('SELECT key, value FROM settings').all(),
+    env.DB.prepare('SELECT date, text, rebuttal, goal, updated_at, deleted, scored_chars FROM writings WHERE user_id = ?1').bind(uid).all(),
+    env.DB.prepare('SELECT key, value FROM settings WHERE user_id = ?1').bind(uid).all(),
   ])
 
   const writings = {}

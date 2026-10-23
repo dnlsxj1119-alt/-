@@ -7,11 +7,19 @@ async function request(key, path, options = {}) {
     ...options,
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}`, ...options.headers },
   })
-  if (res.status === 401) throw new AuthError('비밀번호가 틀렸어요')
   const body = await res.json().catch(() => ({}))
+  if (res.status === 401) throw new AuthError(body.error || '로그인이 필요해요')
   if (!res.ok) throw new Error(body.error || `서버 오류 (${res.status})`)
   return body
 }
+
+export const signup = (username, password) =>
+  request('', '/auth/signup', { method: 'POST', body: JSON.stringify({ username, password }) })
+
+export const login = (username, password) =>
+  request('', '/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) })
+
+export const logout = (token) => request(token, '/auth/logout', { method: 'POST' })
 
 export const fetchAll = (key) => request(key, '/writings')
 

@@ -39,7 +39,7 @@ function ConfirmModal({ title, desc, onConfirm, onClose }) {
 export default function Settings() {
   const {
     settings, updateGoal,
-    logout, syncStatus, sync,
+    username, logout, syncStatus, sync,
     darkMode, toggleDarkMode,
     notifSettings, updateNotifSettings,
     showToast, resetAllData,
@@ -187,8 +187,9 @@ export default function Settings() {
       </Section>
 
       {/* Account */}
-      <Section title="동기화">
+      <Section title="계정">
         <div className="px-5 pb-4 space-y-2">
+          <p className="text-sm font-semibold text-gray-800 dark:text-white">👤 {username}</p>
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600 dark:text-gray-300">
               {syncStatus === 'offline' ? '📴 서버에 연결할 수 없어요 (기기에 저장 중)' : '☁️ 서버(DB)에 저장되고 있어요'}

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { CREATURE_STAGES, BADGES, EXP_RULES, DEFAULT_GOAL, STORAGE_KEYS } from '../utils/constants'
 import { getToday, getYesterday, subtractDay } from '../utils/dateUtils'
-import { fetchAll, putWriting, putSettings, AuthError } from '../utils/api'
+import { fetchAll, putWriting, putSettings, AuthError, signup as apiSignup, login as apiLogin, logout as apiLogout } from '../utils/api'
 
 const load = (key, def) => {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def }
@@ -77,6 +77,7 @@ export function useAppStore() {
   const [rawWritings,    setRawWritings]    = useState(() => load(STORAGE_KEYS.WRITINGS, {}))
   const [settings,       setSettings]       = useState(() => ({ ...DEFAULT_SETTINGS, ...load(STORAGE_KEYS.SETTINGS, {}) }))
   const [authKey,        setAuthKey]        = useState(() => load(STORAGE_KEYS.AUTH, null))
+  const [username,       setUsername]       = useState(() => load(STORAGE_KEYS.OWNER, null))
   const [syncStatus,     setSyncStatus]     = useState('idle') // idle | syncing | synced | pending | offline
   const [darkMode,       setDarkMode]       = useState(() => load(STORAGE_KEYS.DARK_MODE, false))
   const [notifSettings,  setNotifSettings]  = useState(() => load(STORAGE_KEYS.NOTIF, DEFAULT_NOTIF))
@@ -118,17 +119,25 @@ export function useAppStore() {
     setRawWritings(next)
   }, [])
 
-  const logout = useCallback(() => {
+  // 세션만 끊음 (기기에 저장된 글은 남겨서, 같은 사람이 다시 로그인하면 이어서 올라감)
+  const dropSession = useCallback(() => {
     keyRef.current = null
     localStorage.removeItem(STORAGE_KEYS.AUTH)
     setAuthKey(null)
     setSyncStatus('idle')
   }, [])
 
+  const clearLocalData = useCallback(() => {
+    dirty.clear(); saveDirty()
+    commitRaw({})
+    localStorage.removeItem(STORAGE_KEYS.SETTINGS)
+    setSettings(DEFAULT_SETTINGS)
+  }, [commitRaw])
+
   const handleSyncError = useCallback((err) => {
-    if (err instanceof AuthError) { logout(); showToast('🔒 비밀번호를 다시 입력해주세요', 'error') }
+    if (err instanceof AuthError) { dropSession(); showToast('🔒 다시 로그인해주세요', 'error') }
     else setSyncStatus('offline')
-  }, [logout, showToast])
+  }, [dropSession, showToast])
 
   // ── Server sync ───────────────────────────────────────────────────────────
   const flush = useCallback(async () => {
@@ -194,14 +203,31 @@ export function useAppStore() {
     catch (err) { handleSyncError(err) }
   }, [pull, flush, handleSyncError])
 
-  /** 비밀번호 확인 후 저장 (틀리면 에러 throw) */
-  const login = useCallback(async (key) => {
-    await pull(key)
-    keyRef.current = key
-    save(STORAGE_KEYS.AUTH, key)
-    setAuthKey(key)
+  /** 로그인·가입 (실패하면 에러 throw). mode: 'login' | 'signup' */
+  const login = useCallback(async (mode, name, password) => {
+    const { token, username: canonical } = mode === 'signup' ? await apiSignup(name, password) : await apiLogin(name, password)
+    // 이 기기에 다른 사람 글이 남아 있으면 비우고 시작 (주인 기록이 없던 예전 글은 내 계정으로 올림)
+    const owner = load(STORAGE_KEYS.OWNER, null)
+    if (owner && owner.toLowerCase() !== canonical.toLowerCase()) clearLocalData()
+    await pull(token)
+    keyRef.current = token
+    save(STORAGE_KEYS.AUTH, token); save(STORAGE_KEYS.OWNER, canonical)
+    setAuthKey(token); setUsername(canonical)
     await flush()
-  }, [pull, flush])
+  }, [pull, flush, clearLocalData])
+
+  /** 로그아웃: 남은 글을 올려보고, 이 기기에서 글을 지움 (공용 기기 대비) */
+  const logout = useCallback(async () => {
+    const token = keyRef.current
+    if (token) {
+      await flush()
+      apiLogout(token).catch(() => {})
+    }
+    dropSession()
+    clearLocalData()
+    localStorage.removeItem(STORAGE_KEYS.OWNER)
+    setUsername(null)
+  }, [flush, dropSession, clearLocalData])
 
   // 앱 열 때 / 다시 앞으로 올 때 / 인터넷 다시 연결될 때 동기화
   useEffect(() => {
@@ -331,7 +357,7 @@ export function useAppStore() {
     settings, updateGoal,
     gameState,
     getCreatureStage, getCurrentStreak, getStreakMultiplier, getTodayRate,
-    authKey, login, logout, syncStatus, sync,
+    authKey, username, login, logout, syncStatus, sync,
     darkMode, toggleDarkMode,
     notifSettings, updateNotifSettings,
     toasts, showToast,

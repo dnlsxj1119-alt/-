@@ -1,20 +1,20 @@
-// 모든 /api 요청은 WRITE_KEY(비밀번호)가 맞아야 통과
-const json = (body, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+// /api 요청은 로그인 세션이 있어야 통과 (가입·로그인만 예외)
+import { json, sha256hex, bearerToken } from '../../server/auth.js'
 
-async function sameSecret(a, b) {
-  const enc = new TextEncoder()
-  const [ha, hb] = await Promise.all([
-    crypto.subtle.digest('SHA-256', enc.encode(a)),
-    crypto.subtle.digest('SHA-256', enc.encode(b)),
-  ])
-  return crypto.subtle.timingSafeEqual(ha, hb)
-}
+const PUBLIC_PATHS = ['/api/auth/signup', '/api/auth/login']
 
-export async function onRequest({ request, env, next }) {
-  if (!env.WRITE_KEY) return json({ error: '서버 비밀번호(WRITE_KEY)가 설정되지 않았어요' }, 503)
-  const auth = request.headers.get('authorization') || ''
-  const key  = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  if (!key || !(await sameSecret(key, env.WRITE_KEY))) return json({ error: '비밀번호가 틀렸어요' }, 401)
+export async function onRequest({ request, env, data, next }) {
+  if (PUBLIC_PATHS.includes(new URL(request.url).pathname)) return next()
+
+  const token = bearerToken(request)
+  if (!token) return json({ error: '로그인이 필요해요' }, 401)
+
+  const row = await env.DB.prepare(`
+    SELECT s.user_id, u.username FROM sessions s JOIN users u ON u.id = s.user_id
+    WHERE s.token_hash = ?1 AND s.expires_at > ?2
+  `).bind(await sha256hex(token), new Date().toISOString()).first()
+  if (!row) return json({ error: '다시 로그인해주세요' }, 401)
+
+  data.user = { id: row.user_id, username: row.username }
   return next()
 }
