@@ -33,6 +33,9 @@ function WritingCard({ date, entry, open, onToggle, cardRef }) {
             {done ? '✅ ' : ''}{chars.toLocaleString()}자
           </span>
         </div>
+        {entry.topic?.debate && (
+          <p className="text-[11px] text-violet-500 dark:text-violet-400 font-medium mb-1 truncate">💬 {entry.topic.debate.q}</p>
+        )}
         <p className={`text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap ${open ? '' : 'line-clamp-2'}`}>
           {entry.text}
         </p>

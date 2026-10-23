@@ -20,9 +20,11 @@ const getDayLabel = (dateStr) => DAYS[new Date(dateStr + 'T00:00:00').getDay()]
 
 // 날짜마다 고정된 글감 (같은 날엔 같은 글감, 날마다 다른 분야로 섞이게 7칸씩 건너뜀)
 const dayNumber = (dateStr) => Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000)
-const pick = (list, dateStr, offset) => list[(dayNumber(dateStr) * 7 + offset) % list.length]
+const pick = (list, dateStr) => list[(dayNumber(dateStr) * 7) % list.length]
+const keyOf = (p) => p?.q ?? p
+const nextOf = (list, cur) => list[(list.findIndex(p => keyOf(p) === keyOf(cur)) + 1) % list.length]
 
-function PromptRow({ tag, tagClass, text, sub, onNext }) {
+function PromptRow({ tag, tagClass, text, sub, onNext }) { // onNext 없으면 읽기 전용
   return (
     <div className="flex items-start gap-2 bg-white/60 dark:bg-gray-800/60 rounded-2xl px-3 py-2">
       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 mt-px ${tagClass}`}>{tag}</span>
@@ -30,8 +32,8 @@ function PromptRow({ tag, tagClass, text, sub, onNext }) {
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">{text}</p>
         {sub && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
       </div>
-      <button onClick={onNext} aria-label="다른 글감"
-        className="text-xs text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 px-1">↻</button>
+      {onNext && <button onClick={onNext} aria-label="다른 글감"
+        className="text-xs text-gray-400 hover:text-violet-500 transition-colors flex-shrink-0 px-1">↻</button>}
     </div>
   )
 }
@@ -91,8 +93,8 @@ export default function Home() {
   const isLateNight = getActiveDate() === yesterday
 
   const [viewDate,     setViewDate]     = useState(today)
-  const [debateOffset, setDebateOffset] = useState(0)
-  const [easyOffset,   setEasyOffset]   = useState(0)
+  const [debatePick,   setDebatePick]   = useState(null) // ↻로 바꾼 글감 (날짜 바꾸면 초기화)
+  const [easyPick,     setEasyPick]     = useState(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const isPast = viewDate !== today
   // 오늘 + (낮 12시 전) 어제 글만 기록·EXP에 반영. 그 이전 글은 내용만 수정
@@ -100,7 +102,7 @@ export default function Home() {
   const locked   = !editable
 
   const {
-    writings, saveWriting, settings, syncStatus,
+    writings, saveWriting, settings, syncStatus, darkMode, toggleDarkMode,
     gameState, getCurrentStreak, getStreakMultiplier, getCreatureStage, getTodayRate,
   } = useApp()
 
@@ -109,9 +111,26 @@ export default function Home() {
   const rebuttal = entry?.rebuttal || ''
 
 
-  const handleText     = (e) => saveWriting(viewDate, { text: e.target.value }, { locked })
-  const handleRebuttal = (e) => saveWriting(viewDate, { rebuttal: e.target.value }, { locked })
-  const changeDate   = (date) => { setViewDate(date); setDebateOffset(0); setEasyOffset(0) }
+  // 글감: 저장된 그날 글감 > ↻로 고른 것 > 날짜별 기본
+  const savedTopic = entry?.topic
+  const debate = debatePick ?? savedTopic?.debate ?? pick(DEBATE_PROMPTS, viewDate)
+  const easy   = easyPick   ?? savedTopic?.easy   ?? pick(EASY_PROMPTS, viewDate)
+  const topic  = { debate: { cat: debate.cat, q: debate.q, issue: debate.issue }, easy }
+
+  // 쓸 수 있는 날은 지금 보이는 글감을 글과 함께 저장 (지난 글은 원래 글감 유지)
+  const withTopic = (patch) => (editable ? { ...patch, topic } : patch)
+  const handleText     = (e) => saveWriting(viewDate, withTopic({ text: e.target.value }), { locked })
+  const handleRebuttal = (e) => saveWriting(viewDate, withTopic({ rebuttal: e.target.value }), { locked })
+  const changeDate   = (date) => { setViewDate(date); setDebatePick(null); setEasyPick(null) }
+
+  const rotateDebate = () => {
+    const n = nextOf(DEBATE_PROMPTS, debate); setDebatePick(n)
+    if (entry) saveWriting(viewDate, { topic: { ...topic, debate: { cat: n.cat, q: n.q, issue: n.issue } } }, { locked })
+  }
+  const rotateEasy = () => {
+    const n = nextOf(EASY_PROMPTS, easy); setEasyPick(n)
+    if (entry) saveWriting(viewDate, { topic: { ...topic, easy: n } }, { locked })
+  }
 
   const goal       = entry?.goal ?? settings.goal
   const chars      = locked ? scoredChars(entry) : entryChars(entry)
@@ -123,8 +142,6 @@ export default function Home() {
   const todayRate  = getTodayRate()
   const dayExp     = gameState.expByDate[viewDate] || 0
 
-  const debate = pick(DEBATE_PROMPTS, viewDate, debateOffset)
-  const easy   = pick(EASY_PROMPTS, viewDate, easyOffset)
 
   const goBack    = () => changeDate(subtractDay(viewDate))
   const goForward = () => { if (isPast) changeDate(addDay(viewDate)) }
@@ -149,6 +166,10 @@ export default function Home() {
         <button onClick={goForward} disabled={!isPast}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-400 shadow-sm hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xl font-light flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed">
           ›
+        </button>
+        <button onClick={toggleDarkMode} aria-label={darkMode ? '라이트 모드' : '다크 모드'}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 dark:bg-gray-800/70 shadow-sm hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors flex-shrink-0">
+          {darkMode ? '☀️' : '🌙'}
         </button>
         <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2.5 py-1.5 rounded-full flex-shrink-0">
           <span className="text-sm">🔥</span>
@@ -200,13 +221,14 @@ export default function Home() {
       </div>
 
       {/* Prompt */}
-      {editable && <div className="space-y-1.5 mb-2">
+      {(editable || savedTopic) && <div className="space-y-1.5 mb-2">
+        {!editable && <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 px-1">이날의 글감</p>}
         <PromptRow tag="토론" tagClass="text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/40"
-          text={debate.q} sub={`${debate.cat} · 입장 → 근거 → 예상 반론 → 재반박 → 결론`}
-          onNext={() => setDebateOffset(o => o + 1)} />
+          text={debate.q} sub={`${debate.cat}${debate.issue ? ` · 쟁점: ${debate.issue}` : ''}`}
+          onNext={editable ? rotateDebate : undefined} />
         <PromptRow tag="가볍게" tagClass="text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40"
-          text={easy} onNext={() => setEasyOffset(o => o + 1)} />
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">둘 중 끌리는 걸로, 아니면 아무거나 써도 돼요</p>
+          text={easy} onNext={editable ? rotateEasy : undefined} />
+        {editable && <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">둘 중 끌리는 걸로, 아니면 아무거나 써도 돼요 · 입장 → 근거 → 반론 → 재반박 → 결론</p>}
       </div>}
 
       {/* Editors — 모바일: 본문 아래 반론 / PC: 좌우 나란히 */}

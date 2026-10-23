@@ -261,17 +261,18 @@ export function useAppStore() {
     const updatedAt = new Date().toISOString()
     const text     = patch.text     ?? prev?.text     ?? ''
     const rebuttal = patch.rebuttal ?? prev?.rebuttal ?? ''
+    const topic    = patch.topic    ?? prev?.topic    ?? null  // 그날 보던 글감 { debate, easy }
     const hasContent = text.trim() || rebuttal.trim()
     let entry
     if (locked) {
       const scored = prev ? scoredChars(prev) : 0
       const goal   = prev?.goal ?? settings.goal
       entry = hasContent || scored > 0
-        ? { text, rebuttal, goal, updatedAt, scoredChars: scored }
+        ? { text, rebuttal, topic, goal, updatedAt, scoredChars: scored }
         : { text: '', rebuttal: '', goal, updatedAt, deleted: true }
     } else {
       entry = hasContent
-        ? { text, rebuttal, goal: settings.goal, updatedAt }
+        ? { text, rebuttal, topic, goal: settings.goal, updatedAt }
         : { text: '', rebuttal: '', goal: settings.goal, updatedAt, deleted: true }
     }
     const nextRaw = { ...rawRef.current, [date]: entry }
