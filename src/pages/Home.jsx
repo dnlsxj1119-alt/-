@@ -221,7 +221,7 @@ export default function Home() {
           label="🛡️ 반론 · 재반박" labelClass="text-rose-500 dark:text-rose-400"
           value={rebuttal} onChange={handleRebuttal}
           placeholder={'예상 반론: 상대가 뭐라고 할까?\n재반박: 그럼 나는 어떻게 받아칠까?'}
-          footerRight={<span>글자 수에 같이 포함돼요</span>}
+          footerRight={<span>목표 글자 수에는 안 들어가요</span>}
         />
       </div>
 

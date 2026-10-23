@@ -26,8 +26,8 @@ const getStreakMultiplier = (streak) => STREAK_MILESTONES[streak] ?? 1.0
  * 기록·EXP 계산에 쓰는 글자 수. 마감 지난 글을 고치면 고치기 직전 글자 수가
  * scoredChars 로 고정돼서, 나중에 고쳐도 연속 기록·EXP는 바뀌지 않는다.
  */
-/** 본문 + 반론 칸 글자 수 */
-export const entryChars = (entry) => countChars(entry?.text) + countChars(entry?.rebuttal)
+/** 목표·기록에 세는 글자 수 (본문만, 반론 칸은 제외) */
+export const entryChars = (entry) => countChars(entry?.text)
 export const scoredChars = (entry) => entry?.scoredChars ?? entryChars(entry)
 export const isDone = (entry) => !!entry && scoredChars(entry) >= entry.goal
 
