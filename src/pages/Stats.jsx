@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
-import { countChars, isDone } from '../hooks/useAppStore'
+import { entryChars, isDone } from '../hooks/useAppStore'
 import HeatMap from '../components/HeatMap'
 import { getToday, formatFull } from '../utils/dateUtils'
 
@@ -22,7 +22,7 @@ function StatCard({ label, value, sub, color = 'violet' }) {
 }
 
 function WritingCard({ date, entry, open, onToggle, cardRef }) {
-  const chars = countChars(entry.text)
+  const chars = entryChars(entry)
   const done  = isDone(entry)
   return (
     <div ref={cardRef} className={`rounded-2xl p-3.5 ${date === getToday() ? 'bg-violet-50 dark:bg-violet-900/20' : 'bg-gray-50 dark:bg-gray-800/60'}`}>
@@ -36,6 +36,12 @@ function WritingCard({ date, entry, open, onToggle, cardRef }) {
         <p className={`text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap ${open ? '' : 'line-clamp-2'}`}>
           {entry.text}
         </p>
+        {open && entry.rebuttal?.trim() && (
+          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-[10px] font-bold text-rose-500 dark:text-rose-400 mb-1">🛡️ 반론 · 재반박</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{entry.rebuttal}</p>
+          </div>
+        )}
       </button>
     </div>
   )
@@ -49,7 +55,7 @@ export default function Stats() {
   const cardRefs = useRef({})
 
   const entries    = Object.entries(writings).sort(([a], [b]) => b.localeCompare(a)) // newest first
-  const totalChars = entries.reduce((s, [, e]) => s + countChars(e.text), 0)
+  const totalChars = entries.reduce((s, [, e]) => s + entryChars(e), 0)
   const doneDays   = entries.filter(([, e]) => isDone(e)).length
   const streak     = getCurrentStreak()
   const visible    = showAll ? entries : entries.slice(0, 10)

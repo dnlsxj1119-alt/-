@@ -22,7 +22,7 @@ function AppContent() {
 
   return (
     <div className="relative flex justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
-      <div className="w-full max-w-md relative">
+      <div className={`w-full relative ${tab === 'home' ? 'max-w-md lg:max-w-5xl' : 'max-w-md'}`}>
         {tab === 'home'     && <Home />}
         {tab === 'creature' && <Creature />}
         {tab === 'stats'    && <Stats />}

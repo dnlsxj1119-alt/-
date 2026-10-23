@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import { useApp } from '../context/AppContext'
-import { countChars, scoredChars } from '../hooks/useAppStore'
+import { entryChars, scoredChars } from '../hooks/useAppStore'
 import CreatureDisplay from '../components/CreatureDisplay'
 import ProgressBar from '../components/ProgressBar'
 import CalendarModal from '../components/CalendarModal'
@@ -36,6 +36,53 @@ function PromptRow({ tag, tagClass, text, sub, onNext }) {
   )
 }
 
+// ── Auto-growing textarea ─────────────────────────────────────────────────────
+function AutoTextarea({ value, onChange, placeholder, minHeight = 240 }) {
+  const ref = useRef(null)
+
+  // height를 잠깐 auto로 줄일 때 브라우저가 스크롤을 위로 당기므로 위치를 되돌린다
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const scrollY = window.scrollY
+    el.style.height = 'auto'
+    el.style.height = `${Math.max(minHeight, el.scrollHeight)}px`
+    window.scrollTo(0, scrollY)
+
+    // 글 끝에서 쓰는 중이면 커서 줄이 하단 메뉴에 가리지 않게 따라 내려감
+    if (document.activeElement === el && el.selectionEnd === el.value.length) {
+      const viewH  = window.visualViewport?.height ?? window.innerHeight
+      const limit  = viewH - 140 // 하단 메뉴 + 글자 수 줄
+      const bottom = el.getBoundingClientRect().bottom
+      if (bottom > limit) window.scrollBy(0, bottom - limit)
+    }
+  }, [value, minHeight])
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full bg-transparent text-[15px] leading-7 text-gray-800 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none resize-none"
+      style={{ minHeight }}
+    />
+  )
+}
+
+function EditorCard({ label, labelClass, value, onChange, placeholder, footerRight }) {
+  return (
+    <div className="bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-sm border border-white/50 dark:border-gray-700/50 p-4">
+      <p className={`text-[11px] font-bold mb-1 ${labelClass}`}>{label}</p>
+      <AutoTextarea value={value} onChange={onChange} placeholder={placeholder} />
+      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500">
+        <span>공백 포함 {value.length.toLocaleString()}자</span>
+        {footerRight}
+      </div>
+    </div>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function Home() {
   const today = getToday()
@@ -57,34 +104,17 @@ export default function Home() {
     gameState, getCurrentStreak, getStreakMultiplier, getCreatureStage, getTodayRate,
   } = useApp()
 
-  const entry = writings[viewDate]
-  const text  = entry?.text || ''
-  const textRef = useRef(null)
+  const entry    = writings[viewDate]
+  const text     = entry?.text || ''
+  const rebuttal = entry?.rebuttal || ''
 
-  // 입력창 높이 자동 조절
-  // height를 잠깐 auto로 줄일 때 브라우저가 스크롤을 위로 당기므로 위치를 되돌린다
-  useLayoutEffect(() => {
-    const el = textRef.current
-    if (!el) return
-    const scrollY = window.scrollY
-    el.style.height = 'auto'
-    el.style.height = `${Math.max(240, el.scrollHeight)}px`
-    window.scrollTo(0, scrollY)
 
-    // 글 끝에서 쓰는 중이면 커서 줄이 하단 메뉴에 가리지 않게 따라 내려감
-    if (document.activeElement === el && el.selectionEnd === el.value.length) {
-      const viewH  = window.visualViewport?.height ?? window.innerHeight
-      const limit  = viewH - 140 // 하단 메뉴 + 글자 수 줄
-      const bottom = el.getBoundingClientRect().bottom
-      if (bottom > limit) window.scrollBy(0, bottom - limit)
-    }
-  }, [text])
-
-  const handleChange = (e) => saveWriting(viewDate, e.target.value, { locked })
+  const handleText     = (e) => saveWriting(viewDate, { text: e.target.value }, { locked })
+  const handleRebuttal = (e) => saveWriting(viewDate, { rebuttal: e.target.value }, { locked })
   const changeDate   = (date) => { setViewDate(date); setDebateOffset(0); setEasyOffset(0) }
 
   const goal       = entry?.goal ?? settings.goal
-  const chars      = locked ? scoredChars(entry) : countChars(text)
+  const chars      = locked ? scoredChars(entry) : entryChars(entry)
   const rate       = Math.min(1, chars / goal)
   const done       = chars >= goal
   const streak     = getCurrentStreak()
@@ -179,20 +209,20 @@ export default function Home() {
         <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1">둘 중 끌리는 걸로, 아니면 아무거나 써도 돼요</p>
       </div>}
 
-      {/* Editor */}
-      <div className="bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-sm border border-white/50 dark:border-gray-700/50 p-4">
-        <textarea
-          ref={textRef}
-          value={text}
-          onChange={handleChange}
+      {/* Editors — 모바일: 본문 아래 반론 / PC: 좌우 나란히 */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <EditorCard
+          label="✍️ 내 글" labelClass="text-violet-500 dark:text-violet-400"
+          value={text} onChange={handleText}
           placeholder={editable ? '아무 말이나 괜찮아요. 일단 쓰기 시작해보세요.' : '이 날은 쓴 글이 없어요. 지금 남겨도 기록·EXP에는 반영되지 않아요.'}
-          className="w-full bg-transparent text-[15px] leading-7 text-gray-800 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none resize-none"
-          style={{ minHeight: 240 }}
+          footerRight={<span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{SYNC_LABEL[syncStatus]}</span>}
         />
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500">
-          <span>공백 포함 {text.length.toLocaleString()}자</span>
-          <span className={syncStatus === 'offline' ? 'text-amber-500' : ''}>{SYNC_LABEL[syncStatus]}</span>
-        </div>
+        <EditorCard
+          label="🛡️ 반론 · 재반박" labelClass="text-rose-500 dark:text-rose-400"
+          value={rebuttal} onChange={handleRebuttal}
+          placeholder={'예상 반론: 상대가 뭐라고 할까?\n재반박: 그럼 나는 어떻게 받아칠까?'}
+          footerRight={<span>글자 수에 같이 포함돼요</span>}
+        />
       </div>
 
       {calendarOpen && (

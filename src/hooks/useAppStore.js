@@ -26,7 +26,9 @@ const getStreakMultiplier = (streak) => STREAK_MILESTONES[streak] ?? 1.0
  * 기록·EXP 계산에 쓰는 글자 수. 마감 지난 글을 고치면 고치기 직전 글자 수가
  * scoredChars 로 고정돼서, 나중에 고쳐도 연속 기록·EXP는 바뀌지 않는다.
  */
-export const scoredChars = (entry) => entry?.scoredChars ?? countChars(entry?.text)
+/** 본문 + 반론 칸 글자 수 */
+export const entryChars = (entry) => countChars(entry?.text) + countChars(entry?.rebuttal)
+export const scoredChars = (entry) => entry?.scoredChars ?? entryChars(entry)
 export const isDone = (entry) => !!entry && scoredChars(entry) >= entry.goal
 
 // 삭제 표시(tombstone)는 동기화용으로만 보관하고 화면·계산에서는 뺀다
@@ -227,21 +229,24 @@ export function useAppStore() {
   }, [settings, writings, commitRaw, scheduleFlush])
 
   // ── Writing ──────────────────────────────────────────────────────────────
-  // locked: 마감 지난 날짜 (내용만 고치고 점수는 고정)
-  const saveWriting = useCallback((date, text, { locked = false } = {}) => {
+  // patch: { text } 또는 { rebuttal }. locked: 마감 지난 날짜 (내용만 고치고 점수는 고정)
+  const saveWriting = useCallback((date, patch, { locked = false } = {}) => {
     const prev = writings[date]
     const updatedAt = new Date().toISOString()
+    const text     = patch.text     ?? prev?.text     ?? ''
+    const rebuttal = patch.rebuttal ?? prev?.rebuttal ?? ''
+    const hasContent = text.trim() || rebuttal.trim()
     let entry
     if (locked) {
       const scored = prev ? scoredChars(prev) : 0
       const goal   = prev?.goal ?? settings.goal
-      entry = text.trim() || scored > 0
-        ? { text, goal, updatedAt, scoredChars: scored }
-        : { text: '', goal, updatedAt, deleted: true }
+      entry = hasContent || scored > 0
+        ? { text, rebuttal, goal, updatedAt, scoredChars: scored }
+        : { text: '', rebuttal: '', goal, updatedAt, deleted: true }
     } else {
-      entry = text.trim()
-        ? { text, goal: settings.goal, updatedAt }
-        : { text: '', goal: settings.goal, updatedAt, deleted: true }
+      entry = hasContent
+        ? { text, rebuttal, goal: settings.goal, updatedAt }
+        : { text: '', rebuttal: '', goal: settings.goal, updatedAt, deleted: true }
     }
     const nextRaw = { ...rawRef.current, [date]: entry }
     commitRaw(nextRaw)
@@ -281,7 +286,7 @@ export function useAppStore() {
   const getTodayRate = useCallback(() => {
     const entry = writings[getToday()]
     if (!entry) return 0
-    return Math.min(1, countChars(entry.text) / entry.goal)
+    return Math.min(1, entryChars(entry) / entry.goal)
   }, [writings])
 
   // ── Export / Import ───────────────────────────────────────────────────────
@@ -303,7 +308,7 @@ export function useAppStore() {
           const now = new Date().toISOString()
           const next = { ...rawRef.current }
           for (const d of Object.keys(next)) if (!data.writings[d]) next[d] = { text: '', goal: next[d].goal, updatedAt: now, deleted: true }
-          for (const [d, w] of Object.entries(data.writings)) next[d] = { text: w.text, goal: w.goal, updatedAt: now }
+          for (const [d, w] of Object.entries(data.writings)) next[d] = { text: w.text, rebuttal: w.rebuttal || '', goal: w.goal, updatedAt: now }
           commitRaw(next); markDirty(Object.keys(next)); scheduleFlush()
           if (data.settings) { const s = { ...DEFAULT_SETTINGS, ...data.settings }; save(STORAGE_KEYS.SETTINGS, s); setSettings(s) }
           resolve(data)
