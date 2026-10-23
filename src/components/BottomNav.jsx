@@ -7,8 +7,9 @@ const TABS = [
 
 export default function BottomNav({ current, onChange }) {
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40">
-      <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 px-2 pb-safe">
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800">
+      {/* 배경은 화면 전체 폭, 버튼은 가운데 좁은 폭 그대로 */}
+      <div className="max-w-md mx-auto px-2 pb-safe">
         <div className="flex">
           {TABS.map(tab => {
             const active = current === tab.id
